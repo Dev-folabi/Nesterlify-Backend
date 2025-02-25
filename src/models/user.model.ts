@@ -1,9 +1,8 @@
 import mongoose, { Schema, Document } from "mongoose";
 import { IUser } from "../types/models";
 
-interface IUserDocument extends IUser, Document {}
 
-const userSchema = new Schema<IUserDocument>(
+const userSchema = new Schema<IUser>(
   {
     username: {
       type: String,
@@ -83,4 +82,5 @@ const userSchema = new Schema<IUserDocument>(
   { timestamps: true }
 );
 
-export default mongoose.model<IUserDocument>("User", userSchema);
+const User = mongoose.model<IUser>("User", userSchema);
+export default User;

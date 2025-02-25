@@ -169,38 +169,6 @@ interface FlightOffer {
 
 
 
-// export interface FlightSegment {
-//   departure: {
-//     iataCode: string;
-//     at: string;
-//   };
-//   arrival: {
-//     iataCode: string;
-//     at: string;
-//   };
-//   carrierCode: string;
-//   flightNumber: string;
-//   aircraft: string;
-//   duration: string;
-// }
-
-// interface FlightDetails {
-//   id: string;
-//   bookingReference: string;
-//   price: {
-//     currency: string;
-//     total: string;
-//     base: string;
-//   };
-//   travelers: Traveler[];
-//   flightSegments: FlightSegment[];
-// }
-
-// interface Flight {
-//   flightOrderId: string;
-//   flightDetails: FlightDetails;
-// }
-
 interface PaymentDetails {
   transactionId: string;
   paymentStatus: "pending" | "completed" | "failed";
