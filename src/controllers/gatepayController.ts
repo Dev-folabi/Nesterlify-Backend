@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import {
   GatePayOrderPayload,
   PaymentStatusRequest,
-} from "../types/requests/gatepay";
+} from "../types/gatepay";
 import { OrderRequest } from "../types/requests";
 import Booking from "../models/booking.model";
 import { bookFlight, processFlightBooking } from "./flightsController";

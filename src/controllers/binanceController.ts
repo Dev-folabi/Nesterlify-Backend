@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import {
   BinanceOrderPayload,
   PaymentStatusRequest,
-} from "../types/requests/binance";
+} from "../types/binance";
 import { OrderRequest } from "../types/requests";
 import Booking from "../models/booking.model";
 import { bookFlight, processFlightBooking } from "./flightsController";
