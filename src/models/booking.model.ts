@@ -140,7 +140,31 @@ const BookingSchema = new Schema<IBooking>(
       },
     ],
 
-    hotel: { type: Object, default: null },
+    hotel: [
+      {
+        quote_id: { type: String, required: true },
+        guests: [
+          {
+            given_name: { type: String, required: true },
+            family_name: { type: String, required: true },
+          },
+        ],
+        email: { type: String, required: true },
+        stay_special_requests: { type: String, required: false },
+        phone_number: { type: String, required: true },
+        check_in_date: { type: String },
+        check_out_date: { type: String },
+        rooms: { type: Number },
+        check_in_information: {
+          check_out_before_time: { type: String },
+          check_in_before_time: { type: String },
+          check_in_after_time: { type: String },
+        },
+        total_currency: { type: String },
+        total_amount: { type: String },
+        booking_id: { type: String },
+      },
+    ],
     car: [
       {
         passengers: [

@@ -2,15 +2,13 @@ import axios from "axios";
 import crypto from "crypto";
 import { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
-import {
-  GatePayOrderPayload,
-  PaymentStatusRequest,
-} from "../types/gatepay";
+import { GatePayOrderPayload, PaymentStatusRequest } from "../types/gatepay";
 import { OrderRequest } from "../types/requests";
 import Booking from "../models/booking.model";
 import { bookFlight, processFlightBooking } from "./flightsController";
 import { customRequest } from "../types/requests";
 import { bookCarTransfer, processingCarBooking } from "./carsController";
+import { bookHotel, processingHotelBooking } from "./hotelsController";
 dotenv.config();
 
 // Environment Variables
@@ -72,6 +70,11 @@ export const createGatePayOrder = async (
       carOfferID,
       passengers,
       note,
+      quote_id,
+      guests,
+      email,
+      phone_number,
+      stay_special_requests,
     }: OrderRequest = req.body;
 
     if (!amount || !currency || !bookingType) {
@@ -88,7 +91,15 @@ export const createGatePayOrder = async (
     }
 
     // Validate hotel booking fields
-    // Todo: implement hotel check
+    if (
+      bookingType === "hotel" &&
+      (!quote_id || !guests || !email || !phone_number)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Hotel booking missing required fields",
+      });
+    }
 
     // Validate car booking fields
     if (
@@ -127,7 +138,18 @@ export const createGatePayOrder = async (
         );
         break;
       case "hotel":
-        console.log("Processing hotel booking...");
+        await processingHotelBooking(
+          userId,
+          orderId,
+          amount,
+          currency,
+          paymentMethod,
+          quote_id!,
+          guests!,
+          email!,
+          phone_number!,
+          stay_special_requests
+        );
         break;
       case "car":
         await processingCarBooking(
@@ -234,7 +256,7 @@ export const gatePayWebhook = async (
           await bookFlight(orderId);
           break;
         case "hotel":
-          console.log("Processing hotel booking...");
+          await bookHotel(orderId);
           break;
         case "car":
           await bookCarTransfer(orderId);

@@ -192,12 +192,38 @@ interface Car {
   note?: string;
 }
 
+interface Guest {
+  given_name: string;
+  family_name: string;
+}
+
+interface CheckInInformation {
+  check_out_before_time: string;
+  check_in_before_time: string;
+  check_in_after_time: string;
+}
+
+interface Hotel {
+  quote_id: string;
+  guests: Guest[];
+  email: string;
+  stay_special_requests?: string;
+  phone_number: string;
+  check_in_date: string;
+  check_out_date: string;
+  rooms: number;
+  check_in_information: CheckInInformation;
+  total_currency: string;
+  total_amount: string;
+  booking_id: string;
+}
+
 // Booking Document Interface
 export interface IBooking extends Document {
   userId: string;
   bookingType: "flight" | "hotel" | "car" | "vacation";
   flights: FlightOffer[];
-  hotel: Record<string, unknown> | null;
+  hotel: Hotel[];
   car: Car[];
   vacation: Record<string, unknown> | null;
   paymentDetails: PaymentDetails;

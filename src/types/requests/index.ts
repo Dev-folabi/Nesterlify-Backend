@@ -87,4 +87,9 @@ export interface OrderRequest {
   passengers?: any[];
   carOfferID?: string;
   note?: string;
+  quote_id?: string;
+  guests?: any[];
+  email?: string;
+  phone_number?: string;
+  stay_special_requests?: string;
 }

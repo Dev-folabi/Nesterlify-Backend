@@ -1,11 +1,10 @@
 import { Router } from "express";
-// import { find, fetchRoomRates, recheck, book } from "../controllers/hotels.controller";
+import { findHotels, fetchRoomRates, quoteBooking, } from "../controllers/hotelsController";
 
 const router: Router = Router();
 
-// router.post("/find", find);
-// router.post("/rooms", fetchRoomRates);
-// router.post("/recheck", recheck);
-// router.post("/book", book);
+router.post("/", findHotels);
+router.get("/rooms-rate/:id", fetchRoomRates);
+router.get("/quote/:rate_id", quoteBooking);
 
 export default router;
