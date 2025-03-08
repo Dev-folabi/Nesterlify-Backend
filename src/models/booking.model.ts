@@ -195,6 +195,7 @@ const BookingSchema = new Schema<IBooking>(
       paymentMethod: { type: String, required: true },
       amount: { type: String, required: true },
       currency: { type: String, required: true },
+      nowPaymentId: { type: String },
     },
 
     bookingStatus: {

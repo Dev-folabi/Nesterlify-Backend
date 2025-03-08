@@ -148,3 +148,64 @@ export const validateMultiCityFlights = [
 
   handleValidationErrors,
 ];
+
+export const validateHotelSearch = [
+  body("location").notEmpty().withMessage("Location is required"),
+  body("check_in_date")
+    .isISO8601()
+    .toDate()
+    .withMessage("Check-in date must be a valid date in YYYY-MM-DD format"),
+  body("check_out_date")
+    .isISO8601()
+    .toDate()
+    .withMessage("Check-out date must be a valid date in YYYY-MM-DD format"),
+  body("rooms")
+    .isInt({ min: 1 })
+    .withMessage("At least one room is required"),
+  body("guests")
+    .isArray({ min: 1 })
+    .withMessage("At least one guest is required"),
+  body("guests.*.type")
+    .isIn(["adult", "child"])
+    .withMessage("Guest type must be 'adult' or 'child'"),
+  body("guests.*.age")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Child age must be a non-negative integer"),
+  body("radius")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Radius must be a positive integer"),
+
+  // Filters
+  query("minPrice")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Min price must be a valid positive number"),
+  query("maxPrice")
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage("Max price must be a valid positive number"),
+  query("sortBy")
+    .optional()
+    .isIn(["low-to-high", "high-to-low", "popular"])
+    .withMessage("Sort by must be 'low-to-high', 'high-to-low', or 'popular'"),
+  query("propertyType")
+    .optional()
+    .isIn(["all", "home-stay", "apartment", "motel", "resort", "condo"])
+    .withMessage(
+      "Property type must be 'all', 'home-stay', 'apartment', 'motel', 'resort', or 'condo'"
+    ),
+  query("rating")
+    .optional()
+    .isInt({ min: 1, max: 5 })
+    .withMessage("Rating must be between 1 and 5"),
+  query("cancellationPolicy")
+    .optional()
+    .isIn(["all", "fully-refundable", "non-refundable"])
+    .withMessage(
+      "Cancellation policy must be 'all', 'fully-refundable', or 'non-refundable'"
+    ),
+
+  handleValidationErrors,
+];

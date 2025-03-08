@@ -175,6 +175,7 @@ interface PaymentDetails {
   paymentMethod: string;
   amount: string;
   currency: string;
+  nowPaymentId: string;
 }
 
 interface Car {

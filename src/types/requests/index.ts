@@ -92,4 +92,5 @@ export interface OrderRequest {
   email?: string;
   phone_number?: string;
   stay_special_requests?: string;
+  pay_currency?: string; // Required for now payment
 }

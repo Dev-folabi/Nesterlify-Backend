@@ -179,9 +179,9 @@ export const createGatePayOrder = async (
       orderAmount: Number(amount).toFixed(8),
       env: { terminalType: "WEB" },
       goods: {
-        goodsType: "02",
+        goodsType: bookingType,
         goodsName: `${bookingType} - ${orderId}`,
-        goodsDetail: `Order No: ${orderId}`,
+        goodsDetail: `Payment for ${bookingType} booking`,
       },
       orderExpireTime: Date.now() + 3600000,
       returnUrl: GATEPAY_RETURN_URL!,

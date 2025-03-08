@@ -12,7 +12,16 @@ export const validateCreateOrder = [
     .isLength({ min: 3, max: 3 })
     .withMessage("Currency must be a 3-letter currency code (e.g., USD)"),
 
+  body("pay_currency")
+    .optional()
+    .isString()
+    .withMessage(
+      "pay_currency must be string: the crypto pay currency e.g(btc)"
+    )
+    .trim(),
+
   body("bookingType")
+    .isString()
     .isIn(["flight", "hotel", "car", "vacation"])
     .withMessage("Booking type must be one of: flight, hotel, car, vacation"),
 

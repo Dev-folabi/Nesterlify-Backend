@@ -582,7 +582,6 @@ export const bookFlight = async (offerId: string) => {
       throw new Error("Booking not found");
     }
 
-
     // Map flight offers
     const flightOffers = booking.flights.map((flight, index) => ({
       id: (index + 1).toString(),

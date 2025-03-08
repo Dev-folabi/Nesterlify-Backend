@@ -8,6 +8,7 @@ import binanceRoutes from "./binance.route";
 import newsletterRoutes from "./newsletter.route";
 import gatepayRoutes from "./gatepay.route";
 import vacationRoutes from "./vacation.route";
+import nowpaymentRoutes from "./nowpayment.route"
 const router: Router = Router();
 
 router.use("/auth", authRoutes);
@@ -19,5 +20,6 @@ router.use("/binance", binanceRoutes);
 router.use("/gatepay", gatepayRoutes);
 router.use("/vacation", vacationRoutes);
 router.use("/newsletter", newsletterRoutes);
+router.use("/nowpayment", nowpaymentRoutes);
 
 export default router;

@@ -54,6 +54,14 @@ export const findHotels = async (
 ) => {
   const { rooms, guests, check_in_date, check_out_date, location, radius } =
     req.body;
+  const {
+    minPrice,
+    maxPrice,
+    sortBy,
+    propertyType,
+    rating,
+    cancellationPolicy,
+  } = req.query;
 
   if (!rooms || !guests || !check_in_date || !check_out_date || !location) {
     return errorHandler(res, 400, "Missing required fields");
@@ -64,6 +72,10 @@ export const findHotels = async (
 
   if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
     return errorHandler(res, 400, "Invalid date format");
+  }
+
+  if (checkInDate < new Date() || checkOutDate < new Date()) {
+    return errorHandler(res, 400, "Dates must be in the future");
   }
 
   if (checkInDate >= checkOutDate) {
@@ -77,6 +89,7 @@ export const findHotels = async (
   const numberOfAdults = guests.filter(
     (guest): guest is { type: "adult" } => guest.type === "adult"
   ).length;
+
   if (numberOfAdults < rooms) {
     return errorHandler(
       res,
@@ -107,20 +120,91 @@ export const findHotels = async (
 
     const result = await duffel.stays.search(searchParams);
 
-    res
-      .status(200)
-      .json({
-        status: "success",
-        message: "Hotel search successful",
-        data: result.data,
+    if (!result.data || !result.data.results) {
+      return res.status(200).json({
+        success: true,
+        message: "No hotels found",
+        data: { created_at: new Date().toISOString(), results: [] },
       });
+    }
+
+    let hotels = result.data.results.map((hotel: any) => ({
+      ...hotel,
+      cheapest_rate_total_amount: (
+        parseFloat(hotel.cheapest_rate_total_amount) * 1.5
+      ).toFixed(2), // Apply 50% markup
+    }));
+
+    // Apply Min/Max Price filter
+    if (minPrice) {
+      hotels = hotels.filter(
+        (hotel) =>
+          parseFloat(hotel.cheapest_rate_total_amount) >= Number(minPrice)
+      );
+    }
+    if (maxPrice) {
+      hotels = hotels.filter(
+        (hotel) =>
+          parseFloat(hotel.cheapest_rate_total_amount) <= Number(maxPrice)
+      );
+    }
+
+    // Apply Property Type filter
+    if (propertyType && propertyType !== "All") {
+      hotels = hotels.filter(
+        (hotel) => hotel.accommodation?.type === propertyType
+      );
+    }
+
+    // Apply Rating filter
+    if (rating) {
+      hotels = hotels.filter(
+        (hotel) => hotel.accommodation?.rating >= Number(rating)
+      );
+    }
+
+    // Apply Cancellation Policy filter
+    if (cancellationPolicy && cancellationPolicy !== "All") {
+      hotels = hotels.filter(
+        (hotel) => hotel.cancellation_policy === cancellationPolicy
+      );
+    }
+
+    // Sorting
+    if (sortBy === "LowToHigh") {
+      hotels.sort(
+        (a, b) =>
+          parseFloat(a.cheapest_rate_total_amount) -
+          parseFloat(b.cheapest_rate_total_amount)
+      );
+    } else if (sortBy === "HighToLow") {
+      hotels.sort(
+        (a, b) =>
+          parseFloat(b.cheapest_rate_total_amount) -
+          parseFloat(a.cheapest_rate_total_amount)
+      );
+    } else if (sortBy === "Popular") {
+      hotels.sort(
+        (a, b) =>
+          (b.accommodation?.review_score || 0) -
+          (a.accommodation?.review_score || 0)
+      ); // Popularity based on review score
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Hotel search successful",
+      data: {
+        created_at: new Date().toISOString(),
+        results: hotels,
+      },
+    });
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: error.message || "Internal Server Error" });
   }
 };
 
-// Type for fetch room rates request
 interface FetchRoomRatesRequest {
   id: string;
 }
@@ -131,29 +215,49 @@ export const fetchRoomRates = async (
   res: Response
 ) => {
   const { id } = req.params;
+
   if (!id) {
     return res.status(400).json({ error: "Missing id" });
   }
 
   try {
+    // Fetch all room rates for the given hotel ID from Duffel
     const rates = await duffel.stays.searchResults.fetchAllRates(id);
 
-    console.log("rate:", rates);
+    // Apply 50% markup while handling potential missing or invalid values
+    const updatedRates = {
+      ...rates,
+      data: {
+        ...rates.data,
+        cheapest_rate_total_amount: rates.data.cheapest_rate_total_amount
+          ? (parseFloat(rates.data.cheapest_rate_total_amount) * 1.5).toFixed(2)
+          : rates.data.cheapest_rate_total_amount, // Preserve original if invalid
+        accommodation: {
+          ...rates.data.accommodation,
+          rooms: rates.data.accommodation.rooms.map((room: any) => ({
+            ...room,
+            rates: room.rates.map((rate: any) => ({
+              ...rate,
+              total_amount: rate.total_amount
+                ? (parseFloat(rate.total_amount) * 1.5).toFixed(2)
+                : rate.total_amount, // Preserve original if invalid
+            })),
+          })),
+        },
+      },
+    };
 
-    res
-      .status(200)
-      .json({
-        status: "success",
-        message: "Hotel rate get successful",
-        data: rates.data,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Hotel rate fetch successful with markup",
+      data: updatedRates.data,
+    });
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: error.message || "Internal Server Error" });
   }
 };
 
-// Type for recheck request
 interface RecheckRateRequest {
   rate_id: string;
 }
@@ -171,27 +275,27 @@ export const quoteBooking = async (
   try {
     const quote = await duffel.stays.quotes.create(rate_id);
 
-    res
-      .status(200)
-      .json({
-        status: "success",
-        message: "Hotel rate quotes get successful",
-        data: quote.data,
-      });
+    // Apply 50% markup to the total_amount
+    const updatedQuote = {
+      ...quote,
+      data: {
+        ...quote.data,
+        total_amount: quote.data.total_amount
+          ? (parseFloat(quote.data.total_amount) * 1.5).toFixed(2)
+          : quote.data.total_amount, // Preserve original if invalid
+      },
+    };
+
+    res.status(200).json({
+      success: true,
+      message: "Hotel rate quotes get successful",
+      data: updatedQuote.data,
+    });
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: error.message || "Internal Server Error" });
   }
 };
-
-// Type for booking request
-interface BookHotelRequest {
-  quote_id: string;
-  phone_number: string;
-  guests: { given_name: string; family_name: string }[];
-  email: string;
-  accommodation_special_requests?: string;
-}
 
 export const processingHotelBooking = async (
   userId: string,
@@ -203,7 +307,7 @@ export const processingHotelBooking = async (
   guests: { given_name: string; family_name: string }[],
   email: string,
   phone_number: string,
-  stay_special_requests?: string,
+  stay_special_requests?: string
 ) => {
   if (!Array.isArray(guests) || guests.length === 0) {
     throw new Error("Invalid guest data");
