@@ -727,3 +727,41 @@ export const bookFlight = async (offerId: string) => {
     throw new Error("Flight booking failed. Please try again.");
   }
 };
+
+// Track flight status
+export const trackFlight = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { flightNumber, date } = req.query;
+
+    if (!flightNumber || !date) {
+      return errorHandler(res, 400, "Flight number and date are required.");
+    }
+
+    // Call Amadeus API to track flight status
+    const response = await amadeus.schedule.flights.get({
+      carrierCode: (flightNumber as string).slice(0, 2),
+      flightNumber: (flightNumber as string).slice(2),
+      scheduledDepartureDate: date,
+    });
+
+    if (!response.data || response.data.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Flight not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Flight status retrieved successfully.",
+      data: response.data,
+    });
+  } catch (error: any) {
+    console.error("Flight tracking error:", error);
+    next(error);
+  }
+};

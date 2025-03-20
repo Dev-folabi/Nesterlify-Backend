@@ -209,3 +209,18 @@ export const validateHotelSearch = [
 
   handleValidationErrors,
 ];
+
+
+export const validateTrackFlight = [
+  query("flightNumber")
+    .notEmpty()
+    .withMessage("Flight number is required")
+    .isString()
+    .withMessage("Flight number must be a string"),
+  query("date")
+    .notEmpty()
+    .withMessage("Date is required")
+    .isISO8601()
+    .withMessage("Date must be a valid ISO 8601 date"),
+  handleValidationErrors,
+];
