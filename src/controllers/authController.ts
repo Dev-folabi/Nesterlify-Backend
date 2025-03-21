@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { omit } from "lodash";
 import User from "../models/user.model";
 import { Activation, PasswordReset } from "../models/temporaryData";
-import sendMail from "../utils/sendMail";
+import {sendMail} from "../utils/sendMail";
 import { errorHandler } from "../middleware/errorHandler";
 
 // User Signup
@@ -50,8 +50,17 @@ export const signup = async (
 
     await sendMail({
       email,
-      subject: "Your Activation Code",
-      message: `Your activation code: ${activationCode}. Expires in 5 minutes.`,
+      subject: "Account Activation Code",
+      message: `Dear ${fullName},
+
+  Thank you for registering with Nesterlify. To complete your registration, please use the following activation code:
+
+  Activation Code: ${activationCode}
+
+  Please note that this code will expire in 5 minutes. If you did not initiate this request, please disregard this email.
+
+  Best regards,
+  The Nesterlify Team`,
     });
 
     res.status(200).json({
@@ -124,7 +133,16 @@ export const resendOTP = async (
     await sendMail({
       email,
       subject: "New Activation Code",
-      message: `Your new code: ${activationCode}`,
+      message: `Dear User,
+
+  We have generated a new activation code for your account as per your request. Please find your new activation code below:
+
+  Activation Code: ${activationCode}
+
+  This code will expire in 5 minutes. If you did not request this code, please ignore this email.
+
+  Best regards,
+  The Nesterlify Team`,
     });
 
     res
@@ -197,8 +215,17 @@ export const requestPasswordReset = async (
 
     await sendMail({
       email,
-      subject: "Password Reset Code",
-      message: `Your code: ${otpCode}`,
+      subject: "Password Reset Request",
+      message: `Dear ${user.firstName},
+
+    We received a request to reset your password. Please use the following OTP code to reset your password:
+
+    OTP Code: ${otpCode}
+
+    This code will expire in 5 minutes. If you did not request a password reset, please ignore this email.
+
+    Best regards,
+    The Nesterlify Team`,
     });
 
     res

@@ -13,7 +13,7 @@
     "resolveJsonModule": true, // Enables importing JSON files
     "noImplicitAny": true, // Ensures all variables have a defined type
     "strictNullChecks": true, // Avoids issues with null or undefined values
-    "typeRoots": ["./src/types/*", "./src/types/amadeus",  "./node_modules/@types"],
+    "typeRoots": ["./src/types/*", "src/types/customTypes",  "./node_modules/@types"],
   },
   "include": ["src/**/*"], // Includes all TypeScript files in `src/`
   "exclude": ["node_modules", "dist"] // Excludes `node_modules` and output folder

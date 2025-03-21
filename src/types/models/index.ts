@@ -1,4 +1,4 @@
-import { Document } from "mongoose";
+import { Document, Schema } from "mongoose";
 
 interface NotificationSettings {
   website: {
@@ -150,7 +150,6 @@ interface Traveler {
   }[];
 }
 
-
 interface FlightOffer {
   flightOrderId: string;
   type: string;
@@ -167,8 +166,6 @@ interface FlightOffer {
   travelers: Traveler[];
 }
 
-
-
 interface PaymentDetails {
   transactionId: string;
   paymentStatus: "pending" | "completed" | "failed";
@@ -179,16 +176,18 @@ interface PaymentDetails {
 }
 
 interface Car {
- passengers: [{
-  id: string;
-  firstName: string;
-  lastName: string;
-  title: string;
-  contacts: {
-    phoneNumber: string;
-    email: string;
-  };
- }]
+  passengers: [
+    {
+      id: string;
+      firstName: string;
+      lastName: string;
+      title: string;
+      contacts: {
+        phoneNumber: string;
+        email: string;
+      };
+    },
+  ];
   carOfferID: string;
   note?: string;
 }
@@ -229,6 +228,23 @@ export interface IBooking extends Document {
   vacation: Record<string, unknown> | null;
   paymentDetails: PaymentDetails;
   bookingStatus: "pending" | "confirmed" | "failed" | "cancelled";
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Notification Document Interface
+export interface INotification extends Document {
+  userId: Schema.Types.ObjectId;
+  title: string;
+  message: string;
+  read: boolean;
+  category:
+    | "Hotel booking"
+    | "Flight booking"
+    | "Activity booking"
+    | "Car booking"
+    | "Transaction"
+    | "General";
   createdAt: Date;
   updatedAt: Date;
 }

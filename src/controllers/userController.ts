@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import User from "../models/user.model";
 import { CustomRequest } from "../middleware/verify";
 import { errorHandler } from "../middleware/errorHandler";
-import sendMail from "../utils/sendMail";
+import {sendMail} from "../utils/sendMail";
 import { PasswordReset } from "../models/temporaryData";
 
 // Get user details
@@ -202,8 +202,17 @@ export const changePassword = async (
 
     await sendMail({
       email,
-      subject: "Change Password OTP Code",
-      message: `Your OTP code is ${otpCode}. It expires in 5 minutes.`,
+      subject: "Password Change Request - OTP Code",
+      message: `Dear ${user.firstName},
+
+  We have received a request to change the password for your account. Please use the following One-Time Password (OTP) to complete the process:
+
+  OTP Code: ${otpCode}
+
+  This code will expire in 5 minutes. If you did not request a password change, please ignore this email or contact our support team immediately.
+
+  Best regards,
+  The Support Team`,
     });
 
     res.status(200).json({ success: true, message: "OTP sent to your email" });
