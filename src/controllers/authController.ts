@@ -4,8 +4,9 @@ import jwt from "jsonwebtoken";
 import { omit } from "lodash";
 import User from "../models/user.model";
 import { Activation, PasswordReset } from "../models/temporaryData";
-import {sendMail} from "../utils/sendMail";
+import { sendMail } from "../utils/sendMail";
 import { errorHandler } from "../middleware/errorHandler";
+import Notification from "../models/notification.model";
 
 // User Signup
 export const signup = async (
@@ -100,6 +101,19 @@ export const activate = async (
       process.env.JWT_SECRET as string,
       { expiresIn: "1h" }
     );
+
+    await sendMail({
+      email: newUser.email,
+      subject: "Welcome to Nesterlify!",
+      message: `Dear ${newUser.fullName},
+
+    Welcome to Nesterlify! Your account has been successfully activated.
+
+    We are excited to have you on board. If you have any questions or need assistance, feel free to reach out to our support team.
+
+    Best regards,
+    The Nesterlify Team`,
+    });
 
     res.status(200).json({
       success: true,
@@ -280,6 +294,27 @@ export const verifyPasswordOTP = async (
       session.endSession();
       throw err;
     }
+
+    await Promise.all([
+      sendMail({
+        email,
+        subject: "Password Reset Successful",
+        message: `Dear ${user.fullName},
+
+    Your password has been successfully reset. You can now log in with your new password.
+
+    If you did not request this change, please contact our support team immediately.
+
+    Best regards,
+    The Nesterlify Team`,
+      }),
+      Notification.create({
+        userId: user._id,
+        title: "Password Reset",
+        message: "Your password has been successfully reset.",
+        category: "General",
+      }),
+    ]);
 
     res
       .status(200)

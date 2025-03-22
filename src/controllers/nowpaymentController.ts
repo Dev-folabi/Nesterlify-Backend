@@ -7,6 +7,9 @@ import { bookFlight, processFlightBooking } from "./flightsController";
 import { customRequest } from "../types/requests";
 import { bookCarTransfer, processingCarBooking } from "./carsController";
 import { bookHotel, processingHotelBooking } from "./hotelsController";
+import { sendMail } from "../utils/sendMail";
+import User from "../models/user.model";
+import Notification from "../models/notification.model";
 
 // Get Currencies
 export const getNowPaymentCurrencies = async (
@@ -114,7 +117,7 @@ export const createOrder = async (
         .json({ success: false, message: "Unauthorized, pls login" });
     const paymentMethod = "Now Payment";
 
-    const orderId = `ORD- ${crypto.randomBytes(4).toString("hex")}`;
+    const orderId = `ORD-${crypto.randomBytes(4).toString("hex")}`;
 
     // Booking Logics
     switch (bookingType) {
@@ -184,6 +187,34 @@ export const createOrder = async (
       });
     }
 
+    const user = await User.findById(userId);
+    await Promise.all([
+      sendMail({
+        email: user?.email || "",
+        subject:
+          response.payment_status === "waiting"
+            ? "Booking Initiated, please proceed with payment"
+            : "Booking Failed",
+        message: `Dear Customer,
+    
+        Your booking has been ${response.payment_status === "waiting" ? "successfully initiated" : "failed"}. Your order ID is ${orderId}.
+    
+        ${response.payment_status === "waiting" ? "Thank you for choosing our service." : "Please try again or contact support."}
+    
+        Best regards,
+        The Nesterlify Team`,
+      }),
+      Notification.create({
+        userId,
+        title:
+          response.payment_status === "waiting"
+            ? "Booking Initiated"
+            : "Booking Failed",
+        message: `Your booking with order ID ${orderId} has been ${response.payment_status === "waiting" ? "successfully initiated, please proceed with payment" : "failed"}.`,
+        category: `${bookingType} Booking`,
+      }),
+    ]);
+
     return res.status(200).json({
       success: response.payment_status === "waiting",
       message:
@@ -207,7 +238,6 @@ export const nowPaymentWebhook = async (
   try {
     console.log("NOWPayments Webhook Notification:", req.body);
 
-    // Extract data from request
     const {
       payment_id,
       payment_status,
@@ -229,38 +259,83 @@ export const nowPaymentWebhook = async (
 
     const bookingType = booking.bookingType;
 
-    if (payment_status === "finished") {
-      // Process booking based on type
-      switch (bookingType) {
-        case "flight":
-          await bookFlight(order_id);
-          break;
-        case "hotel":
-          await bookHotel(order_id);
-          break;
-        case "car":
-          await bookCarTransfer(order_id);
-          break;
-        case "vacation":
-          console.log("Processing vacation booking...");
-          break;
-        default:
-          return res
-            .status(400)
-            .json({ success: false, message: "Invalid booking type" });
-      }
-      booking.paymentDetails.nowPaymentId = payment_id;
-    } else {
-      // Handle failed or pending payments
-      booking.bookingStatus = "failed";
-      booking.paymentDetails.paymentStatus = "failed";
+    switch (payment_status) {
+      case "waiting":
+        booking.paymentDetails.paymentStatus = "pending";
+        booking.bookingStatus = "pending";
+        break;
+
+      case "confirming":
+        booking.paymentDetails.paymentStatus = "processing";
+        booking.bookingStatus = "pending";
+        break;
+
+      case "finished":
+        // Process booking based on type
+        switch (bookingType) {
+          case "flight":
+            await bookFlight(order_id);
+            break;
+          case "hotel":
+            await bookHotel(order_id);
+            break;
+          case "car":
+            await bookCarTransfer(order_id);
+            break;
+          case "vacation":
+            console.log("Processing vacation booking...");
+            break;
+          default:
+            return res
+              .status(400)
+              .json({ success: false, message: "Invalid booking type" });
+        }
+
+        booking.paymentDetails.nowPaymentId = payment_id;
+        booking.paymentDetails.paymentStatus = "completed";
+        booking.bookingStatus = "confirmed";
+
+        // Notify User
+        const user = await User.findById(booking.userId);
+        await Promise.all([
+          sendMail({
+            email: user?.email || "",
+            subject: "Payment Successful",
+            message: `Dear ${user?.fullName || "Customer"},
+            
+            Your payment for booking with order ID ${order_id} has been successfully processed.
+            
+            Thank you for choosing our service.
+            
+            Best regards,
+            The Nesterlify Team`,
+          }),
+          Notification.create({
+            userId: booking.userId,
+            title: "Payment Successful",
+            message: `Your payment for booking with order ID ${order_id} has been successfully processed.`,
+            category: `${bookingType} Booking`,
+          }),
+        ]);
+        break;
+
+      case "failed":
+        booking.paymentDetails.paymentStatus = "failed";
+        booking.bookingStatus = "failed";
+        return res.status(200).json({ returnCode: "FAIL" });
+
+      default:
+        return res
+          .status(400)
+          .json({ success: false, message: "Unknown payment status" });
     }
 
-    // Save the updated booking
+    // Save booking before responding
     await booking.save();
 
     return res.status(200).json({ returnCode: "SUCCESS" });
   } catch (error) {
+    console.error("NOWPayments Webhook Error:", error);
     next(error);
   }
 };
@@ -271,7 +346,7 @@ export const getPaymentStatus = async (
   next: NextFunction
 ) => {
   try {
-    const { paymentId } = req.params;
+    const { paymentId } = req.query;
 
     if (!paymentId) {
       return res.status(400).json({
@@ -280,7 +355,9 @@ export const getPaymentStatus = async (
       });
     }
 
-    const paymentStatus = await nowpayment.getPaymentStatus(paymentId);
+    const paymentStatus = await nowpayment.getPaymentStatus(
+      paymentId as string
+    );
 
     return res.status(200).json({
       success: true,

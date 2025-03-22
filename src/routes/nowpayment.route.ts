@@ -13,6 +13,6 @@ const router = Router();
 router.get("/", getNowPaymentCurrencies);
 router.post("/create-order", verifyToken, validateCreateOrder, createOrder);
 router.post("/webhook", nowPaymentWebhook);
-router.get("/status/:paymentId", getPaymentStatus);
+router.get("/status", getPaymentStatus);
 
 export default router;

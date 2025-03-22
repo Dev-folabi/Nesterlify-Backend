@@ -37,7 +37,7 @@ router.post(
   validateEditProfile,
   editProfile
 );
-router.get("/", verifyToken, users);
+
 router.post("/two-fa", verifyToken, validateTwoFA, twoFA);
 router.post("/email-toggle", verifyToken, validateEmailToggle, emailToggle);
 router.post(
@@ -64,14 +64,20 @@ router.post(
   validateVerifyChangePasswordOTP,
   verifyChangePasswordOTP
 );
-router.delete("/delete-user/:id", verifyToken, validateDeleteUser, deleteUser);
-router.delete(
-  "/delete/selected",
-  verifyToken,
-  validateDeleteSelectedUsers,
-  deleteSelectedUsers
-);
-router.get("/all/admins/", verifyToken, admins);
-router.patch("/block-user/:id", verifyToken, validateBlockUser, blockUser);
+
+/* 
+Admin routes - will be move to admin route in the future
+*/
+
+// router.get("/", verifyToken, users);
+// router.delete("/delete-user/:id", verifyToken, validateDeleteUser, deleteUser);
+// router.delete(
+//   "/delete/selected",
+//   verifyToken,
+//   validateDeleteSelectedUsers,
+//   deleteSelectedUsers
+// );
+// router.get("/all/admins/", verifyToken, admins);
+// router.patch("/block-user/:id", verifyToken, validateBlockUser, blockUser);
 
 export default router;

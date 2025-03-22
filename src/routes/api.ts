@@ -8,7 +8,9 @@ import binanceRoutes from "./binance.route";
 import newsletterRoutes from "./newsletter.route";
 import gatepayRoutes from "./gatepay.route";
 import vacationRoutes from "./vacation.route";
-import nowpaymentRoutes from "./nowpayment.route"
+import nowpaymentRoutes from "./nowpayment.route";
+import notificationRoutes from "./notification.route";
+import { verifyToken } from "../middleware/verify";
 const router: Router = Router();
 
 router.use("/auth", authRoutes);
@@ -21,5 +23,6 @@ router.use("/gatepay", gatepayRoutes);
 router.use("/vacation", vacationRoutes);
 router.use("/newsletter", newsletterRoutes);
 router.use("/nowpayment", nowpaymentRoutes);
+router.use("/notifications", verifyToken, notificationRoutes);
 
 export default router;

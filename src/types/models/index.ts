@@ -168,7 +168,7 @@ interface FlightOffer {
 
 interface PaymentDetails {
   transactionId: string;
-  paymentStatus: "pending" | "completed" | "failed";
+  paymentStatus: "pending" | "processing" | "completed" | "failed";
   paymentMethod: string;
   amount: string;
   currency: string;

@@ -10,6 +10,9 @@ import { bookFlight, processFlightBooking } from "./flightsController";
 import { customRequest } from "../types/requests";
 import { bookCarTransfer, processingCarBooking } from "./carsController";
 import { bookHotel, processingHotelBooking } from "./hotelsController";
+import { sendMail } from "../utils/sendMail";
+import User from "../models/user.model";
+import Notification from "../models/notification.model";
 dotenv.config();
 
 // Environment Variables
@@ -112,7 +115,7 @@ export const createOrder = async (
         .json({ success: false, message: "Unauthorized, pls login" });
     const paymentMethod = "Binance Pay";
 
-    const orderId = `ORD- ${crypto.randomBytes(4).toString("hex")}`;
+    const orderId = `ORD-${crypto.randomBytes(4).toString("hex")}`;
 
     // Booking Logics
     switch (bookingType) {
@@ -198,6 +201,34 @@ export const createOrder = async (
       }
     );
 
+    const user = await User.findById(userId);
+    await Promise.all([
+      sendMail({
+        email: user?.email || "",
+        subject:
+          response.data.status === "SUCCESS"
+            ? "Booking Initiated, please proceed with payment"
+            : "Booking Failed",
+        message: `Dear Customer,
+
+    Your booking has been ${response.data.status === "SUCCESS" ? "successfully initiated" : "failed"}. Your order ID is ${orderId}.
+
+    ${response.data.status === "SUCCESS" ? "Thank you for choosing our service." : "Please try again or contact support."}
+
+    Best regards,
+    The Nesterlify Team`,
+      }),
+      Notification.create({
+        userId,
+        title:
+          response.data.status === "SUCCESS"
+            ? "Booking Initiated"
+            : "Booking Failed",
+        message: `Your booking with order ID ${orderId} has been ${response.data.status === "SUCCESS" ? "successfully initiated, please proceed with payment" : "failed"}.`,
+        category: `${bookingType} Booking`,
+      }),
+    ]);
+
     return res.status(200).json({
       success: response.data.status === "SUCCESS",
       message:
@@ -213,24 +244,61 @@ export const createOrder = async (
 };
 
 //  Payment Callback
-export const paymentCallback = async (
+export const binanceWebhook = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
+    //  Verify Binance Signature
+    const binanceSignature = req.headers["x-binancepay-signature"];
+    const secretKey = process.env.BINANCE_WEBHOOK_SECRET;
+    const requestBody = JSON.stringify(req.body);
+
+    const expectedSignature = crypto
+      .createHmac("sha256", secretKey || "")
+      .update(requestBody)
+      .digest("hex");
+
+    if (binanceSignature !== expectedSignature) {
+      console.error(" Invalid Binance webhook signature");
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid signature" });
+    }
+
+    // Check if request body contains expected data
+    if (!req.body || !req.body.data) {
+      console.error(" Invalid webhook payload:", req.body);
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid payload" });
+    }
+
     const { data, bizStatus } = req.body;
     const { merchantTradeNo } = data;
+
     const booking = await Booking.findOne({
       "paymentDetails.transactionId": merchantTradeNo,
     });
 
     if (!booking) {
+      console.error(
+        ` Booking not found for transaction ID: ${merchantTradeNo}`
+      );
       return res
         .status(404)
         .json({ success: false, message: "Booking not found" });
     }
 
+    console.log(
+      ` Webhook received for booking ID: ${merchantTradeNo} - Status: ${bizStatus}`
+    );
+
+    // Prevent Duplicate Processing
+    if (booking.paymentDetails.paymentStatus === "completed") {
+      return res.status(200).json({ returnCode: "SUCCESS" });
+    }
     const bookingType = booking.bookingType;
 
     if (bizStatus === "PAY_SUCCESS") {
@@ -252,22 +320,51 @@ export const paymentCallback = async (
             .status(400)
             .json({ success: false, message: "Invalid booking type" });
       }
+
+      booking.bookingStatus = "confirmed";
+      booking.paymentDetails.paymentStatus = "completed";
+    } else if (bizStatus === "PAY_PROCESSING") {
+      console.log(" Payment is still processing...");
+      booking.bookingStatus = "pending";
+      booking.paymentDetails.paymentStatus = "processing";
     } else {
+      console.log(" Payment failed or expired...");
       booking.bookingStatus = "failed";
       booking.paymentDetails.paymentStatus = "failed";
-      await booking.save();
-      return res.status(200).json({
-        returnCode: "FAIL",
-      });
     }
 
-    //  Save the booking with updated flight details and payment status
+    // Save updated booking status
     await booking.save();
 
-    return res.status(200).json({
-      returnCode: "SUCCESS",
-    });
+    // Notify user if payment was successful
+    if (bizStatus === "PAY_SUCCESS") {
+      const user = await User.findById(booking.userId);
+
+      await Promise.all([
+        sendMail({
+          email: user?.email || "",
+          subject: "Payment Successful",
+          message: `Dear ${user?.fullName || "Customer"},
+          
+          Your payment for booking with order ID ${merchantTradeNo} has been successfully processed.
+
+          Thank you for choosing our service.
+
+          Best regards,
+          The Nesterlify Team`,
+        }),
+        Notification.create({
+          userId: booking.userId,
+          title: "Payment Successful",
+          message: `Your payment for booking with order ID ${merchantTradeNo} has been successfully processed.`,
+          category: `${bookingType} Booking`,
+        }),
+      ]);
+    }
+
+    return res.status(200).json({ returnCode: "SUCCESS" });
   } catch (error) {
+    console.error("Webhook processing error:", error);
     next(error);
   }
 };
@@ -279,7 +376,7 @@ export const checkPaymentStatus = async (
   next: NextFunction
 ) => {
   try {
-    const { orderId }: PaymentStatusRequest = req.body;
+    const { orderId } = req.query as unknown as PaymentStatusRequest;
 
     if (!orderId) {
       return res
@@ -301,7 +398,7 @@ export const checkPaymentStatus = async (
           "BinancePay-Certificate-SN": BINANCE_API_KEY,
           "BinancePay-Signature": signature,
         },
-        timeout: 10000,
+        timeout: 20000,
       }
     );
 

@@ -16,6 +16,6 @@ router.post("/create-order", validateCreateOrder, verifyToken, createGatePayOrde
 router.post("/webhook", gatePayWebhook);
 
 //  Route to check payment status
-router.post("/status", checkGatePayStatus);
+router.get("/status", checkGatePayStatus);
 
 export default router;

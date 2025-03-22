@@ -9,6 +9,9 @@ import { bookFlight, processFlightBooking } from "./flightsController";
 import { customRequest } from "../types/requests";
 import { bookCarTransfer, processingCarBooking } from "./carsController";
 import { bookHotel, processingHotelBooking } from "./hotelsController";
+import { sendMail } from "../utils/sendMail";
+import User from "../models/user.model";
+import Notification from "../models/notification.model";
 dotenv.config();
 
 // Environment Variables
@@ -122,7 +125,7 @@ export const createGatePayOrder = async (
         .json({ success: false, message: "Unauthorized, pls login" });
     const paymentMethod = "Gate Pay";
 
-    const orderId = `ORD- ${crypto.randomBytes(4).toString("hex")}`;
+    const orderId = `ORD-${crypto.randomBytes(4).toString("hex")}`;
 
     // Booking Logics
     switch (bookingType) {
@@ -172,7 +175,7 @@ export const createGatePayOrder = async (
           .json({ success: false, message: "Invalid booking type" });
     }
 
-    // ✅ Construct Order Payload
+    //  Construct Order Payload
     const payload = {
       merchantTradeNo: orderId,
       currency: "USDT",
@@ -186,9 +189,9 @@ export const createGatePayOrder = async (
       orderExpireTime: Date.now() + 3600000,
       returnUrl: GATEPAY_RETURN_URL!,
       cancelUrl: GATEPAY_CANCEL_URL!,
-      merchantUserId: Number(GATEPAY_MERCHANT_USERID), // Ensure it's a number
-      chain: GATEPAY_CHAIN, // Ensure valid value
-      fullCurrType: GATEPAY_FULL_CURR_TYPE, // Ensure valid value
+      merchantUserId: Number(GATEPAY_MERCHANT_USERID),
+      chain: GATEPAY_CHAIN, 
+      fullCurrType: GATEPAY_FULL_CURR_TYPE, 
     };
 
     const bodyString = JSON.stringify(payload);
@@ -196,7 +199,7 @@ export const createGatePayOrder = async (
     const nonce = generateNonce(16);
     const signature = generateSignature(timestamp, nonce, bodyString);
 
-    // ✅ Make API Request to GatePay
+    //  Make API Request to GatePay
     const response = await axios.post(
       `${GATEPAY_BASE_URL}/v1/pay/checkout/order`,
       payload,
@@ -212,6 +215,34 @@ export const createGatePayOrder = async (
       }
     );
 
+    const user = await User.findById(userId);
+    await Promise.all([
+      sendMail({
+        email: user?.email || "",
+        subject:
+          response.data.status === "SUCCESS"
+            ? "Booking Initiated, please proceed with payment"
+            : "Booking Failed",
+        message: `Dear Customer,
+
+    Your booking has been ${response.data.status === "SUCCESS" ? "successfully initiated" : "failed"}. Your order ID is ${orderId}.
+
+    ${response.data.status === "SUCCESS" ? "Thank you for choosing our service." : "Please try again or contact support."}
+
+    Best regards,
+    The Nesterlify Team`,
+      }),
+      Notification.create({
+        userId,
+        title:
+          response.data.status === "SUCCESS"
+            ? "Booking Initiated"
+            : "Booking Failed",
+        message: `Your booking with order ID ${orderId} has been ${response.data.status === "SUCCESS" ? "successfully initiated, please proceed with payment" : "failed"}.`,
+        category: `${bookingType} Booking`,
+      }),
+    ]);
+
     return res.status(200).json({
       success: true,
       message:
@@ -226,6 +257,18 @@ export const createGatePayOrder = async (
   }
 };
 
+const verifyGatePaySignature = (req: Request) => {
+  const gatePaySecret = process.env.GATEPAY_WEBHOOK_SECRET!;
+  const receivedSignature = req.headers["x-gatepay-signature"];
+
+  const computedSignature = crypto
+    .createHmac("sha256", gatePaySecret)
+    .update(JSON.stringify(req.body))
+    .digest("hex");
+
+  return receivedSignature === computedSignature;
+};
+
 // Payment Callback - Confirm Booking
 export const gatePayWebhook = async (
   req: Request,
@@ -233,11 +276,27 @@ export const gatePayWebhook = async (
   next: NextFunction
 ) => {
   try {
-    const { bizStatus, data } = req.body;
     console.log("GatePay Webhook Notification:", req.body);
+
+    // Verify Signature
+    if (!verifyGatePaySignature(req)) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid signature" });
+    }
+
+    const { bizStatus, data } = req.body;
+
+    // Ensure `data` Exists
+    if (!data || !data.merchantTradeNo) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid payload" });
+    }
 
     const orderId = data.merchantTradeNo;
 
+    // Find the booking
     const booking = await Booking.findOne({
       "paymentDetails.transactionId": orderId,
     });
@@ -248,10 +307,14 @@ export const gatePayWebhook = async (
         .json({ success: false, message: "Booking not found" });
     }
 
-    const bookingType = booking.bookingType;
+    // Prevent Duplicate Processing
+    if (booking.paymentDetails.paymentStatus === "completed") {
+      return res.status(200).json({ returnCode: "SUCCESS" });
+    }
 
+    // Process Payment Status
     if (bizStatus === "PAY_SUCCESS") {
-      switch (bookingType) {
+      switch (booking.bookingType) {
         case "flight":
           await bookFlight(orderId);
           break;
@@ -262,28 +325,51 @@ export const gatePayWebhook = async (
           await bookCarTransfer(orderId);
           break;
         case "vacation":
-          console.log("Processing vacation booking...");
+          await console.log("Processing vacation booking...");
           break;
         default:
           return res
             .status(400)
             .json({ success: false, message: "Invalid booking type" });
       }
+
+      // Update Booking Status
+      booking.bookingStatus = "confirmed";
+      booking.paymentDetails.paymentStatus = "completed";
     } else {
       booking.bookingStatus = "failed";
       booking.paymentDetails.paymentStatus = "failed";
-      await booking.save();
-      return res.status(200).json({
-        returnCode: "FAIL",
-      });
     }
 
-    //  Save the booking with updated flight details and payment status
     await booking.save();
 
-    return res.status(200).json({
-      returnCode: "SUCCESS",
-    });
+    // Notify the User
+    const user = await User.findById(booking.userId);
+
+    await Promise.all([
+      sendMail({
+        email: user?.email || "",
+        subject:
+          bizStatus === "PAY_SUCCESS" ? "Payment Successful" : "Payment Failed",
+        message: `Dear ${user?.fullName || "Customer"},
+    
+        Your payment for booking with order ID ${orderId} has been ${bizStatus === "PAY_SUCCESS" ? "successfully processed" : "failed"}.
+
+        Thank you for choosing our service.
+
+        Best regards,
+        The Nesterlify Team`,
+      }),
+      Notification.create({
+        userId: booking.userId,
+        title:
+          bizStatus === "PAY_SUCCESS" ? "Payment Successful" : "Payment Failed",
+        message: `Your payment for booking with order ID ${orderId} has been ${bizStatus === "PAY_SUCCESS" ? "processed successfully" : "failed"}.`,
+        category: `${booking.bookingType} Booking`,
+      }),
+    ]);
+
+    return res.status(200).json({ returnCode: "SUCCESS" });
   } catch (error) {
     next(error);
   }
@@ -296,7 +382,7 @@ export const checkGatePayStatus = async (
   next: NextFunction
 ) => {
   try {
-    const { orderId }: PaymentStatusRequest = req.body;
+    const { orderId } = req.query as unknown as PaymentStatusRequest;
     if (!orderId) {
       return res
         .status(400)
@@ -304,19 +390,23 @@ export const checkGatePayStatus = async (
     }
 
     const payload = { orderId };
-    // const { signature } = generateSignature(payload);
+
+    const bodyString = JSON.stringify(payload);
+    const timestamp = Date.now().toString();
+    const nonce = generateNonce(16);
+    const signature = generateSignature(timestamp, nonce, bodyString);
 
     const response = await axios.post(
       `${GATEPAY_BASE_URL}/api/order/status`,
-      payload
-      // {
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //     "X-GatePay-API-Key": GATEPAY_API_KEY!,
-      //     "X-GatePay-Signature": signature,
-      //   },
-      //   timeout: 10000,
-      // }
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-GatePay-API-Key": GATEPAY_API_KEY!,
+          "X-GatePay-Signature": signature,
+        },
+        timeout: 10000,
+      }
     );
 
     return res.status(200).json({
@@ -325,6 +415,7 @@ export const checkGatePayStatus = async (
       data: response.data,
     });
   } catch (error) {
+    console.log(error);
     next(error);
   }
 };

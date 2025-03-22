@@ -1,23 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import Notification from "../models/notification.model";
 import { errorHandler } from "../middleware/errorHandler";
+import { customRequest } from "../types/requests";
 
-// Create a new notification
-export const createNotification = async (req: Request, res: Response) => {
-  try {
-    const { title, message, userId, category } = req.body;
-    const newNotification = new Notification({
-      title,
-      message,
-      userId,
-      category,
-    });
-    const savedNotification = await newNotification.save();
-    res.status(201).json(savedNotification);
-  } catch (error) {
-    res.status(500).json({ message: "Error creating notification", error });
-  }
-};
 
 // Get all notifications for a user
 export const getNotifications = async (
@@ -26,10 +11,10 @@ export const getNotifications = async (
   next: NextFunction
 ) => {
   try {
-    const userId = req.params.userId;
+    const userId = (req as customRequest).user?.id;
     const { category, dateFilter, readStatus } = req.query;
     const filter: any = { userId };
-
+    
     if (category && category !== "all") {
       filter.category = category;
     }
@@ -86,8 +71,9 @@ export const markAsRead = async (
 ) => {
   try {
     const { id } = req.params;
+
     if (id === "all") {
-      const userId = req.body.userId;
+      const userId = (req as customRequest).user?.id;
       await Notification.updateMany(
         { userId, read: false },
         { $set: { read: true } }

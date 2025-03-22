@@ -127,8 +127,8 @@ export const validateMultiCityFlights = [
     ),
   query("stops")
     .optional()
-    .isInt({ min: 0, max: 2 })
-    .withMessage("Stops must be 0 (direct), 1, or 2"),
+    .isIn(["any", "direct", "1", "2"])
+    .withMessage("Stops must be 'any', 'direct', '1', or '2'"),
   query("cancellationPolicy")
     .optional()
     .isIn(["all", "fully-refundable", "non-refundable"])
@@ -159,9 +159,7 @@ export const validateHotelSearch = [
     .isISO8601()
     .toDate()
     .withMessage("Check-out date must be a valid date in YYYY-MM-DD format"),
-  body("rooms")
-    .isInt({ min: 1 })
-    .withMessage("At least one room is required"),
+  body("rooms").isInt({ min: 1 }).withMessage("At least one room is required"),
   body("guests")
     .isArray({ min: 1 })
     .withMessage("At least one guest is required"),
@@ -209,7 +207,6 @@ export const validateHotelSearch = [
 
   handleValidationErrors,
 ];
-
 
 export const validateTrackFlight = [
   query("flightNumber")
