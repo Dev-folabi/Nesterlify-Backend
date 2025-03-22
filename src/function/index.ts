@@ -10,7 +10,9 @@ export const paginateResults = <T>(data: T[], page?: number, limit?: number) => 
       totalItems,
       totalPages,
       currentPage,
-      pageSize: limit ? limit : 10,
+      prevPage: currentPage > 1 ? currentPage - 1 : 0,
+      nextPage: currentPage < totalPages ? currentPage + 1 : 0,
+      itemPerPage: limit ? limit : 10,
       data: data.slice(startIndex, endIndex),
     };
   };

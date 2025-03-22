@@ -11,5 +11,5 @@ const router = Router();
 router.get("/getCoordinates", getCoordinates);
 router.get("/", getVacations);
 router.get("/getVacationById/:activityId", getVacationById);
-router.post("/", bookVacation);
+// router.post("/", bookVacation);
 export default router;

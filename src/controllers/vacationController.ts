@@ -3,6 +3,7 @@ import { amadeus } from "../utils/amadeus";
 import { errorHandler } from "../middleware/errorHandler";
 import axios from "axios";
 import dotenv from "dotenv";
+import { paginateResults } from "../function";
 
 dotenv.config();
 
@@ -80,7 +81,11 @@ export const getVacations = async (
     res.status(200).json({
       success: true,
       message: "Vacations retrieved successfully",
-      data: response.data,
+      data: paginateResults(
+        response.data,
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error: any) {
     next(error);
@@ -104,7 +109,11 @@ export const getVacationById = async (
     res.status(200).json({
       success: true,
       message: "Vacation retrieved successfully",
-      data: response.data,
+      data: paginateResults(
+        [response.data],
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error: any) {
     next(error);
@@ -142,7 +151,11 @@ export const bookVacation = async (
     res.status(201).json({
       success: true,
       message: "Activity booked successfully",
-      data: response.data,
+      data: paginateResults(
+        response.data,
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error: any) {
     console.log(error);

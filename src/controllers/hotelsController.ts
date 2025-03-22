@@ -3,6 +3,7 @@ import axios from "axios";
 import { Request, Response } from "express";
 import { errorHandler } from "../middleware/errorHandler";
 import Booking from "../models/booking.model";
+import { paginateResults } from "../function";
 
 const { DUFFEL_TOKEN, NOMINATIM_BASE_URL } = process.env;
 
@@ -194,10 +195,11 @@ export const findHotels = async (
     res.status(200).json({
       success: true,
       message: "Hotel search successful",
-      data: {
-        created_at: new Date().toISOString(),
-        results: hotels,
-      },
+      data: paginateResults(
+        hotels,
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error: any) {
     console.error(error);
@@ -250,7 +252,11 @@ export const fetchRoomRates = async (
     res.status(200).json({
       success: true,
       message: "Hotel rate fetch successful with markup",
-      data: updatedRates.data,
+      data: paginateResults(
+        [updatedRates.data],
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error: any) {
     console.error(error);
@@ -289,7 +295,11 @@ export const quoteBooking = async (
     res.status(200).json({
       success: true,
       message: "Hotel rate quotes get successful",
-      data: updatedQuote.data,
+      data: paginateResults(
+        [updatedQuote.data],
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error: any) {
     console.error(error);

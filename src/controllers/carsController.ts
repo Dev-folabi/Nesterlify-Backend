@@ -4,6 +4,7 @@ import axios from "axios";
 import { errorHandler } from "../middleware/errorHandler";
 import Booking from "../models/booking.model";
 import dotenv from "dotenv";
+import { paginateResults } from "../function";
 
 dotenv.config();
 
@@ -76,7 +77,11 @@ export const getMatchingAirports = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: "Location search successfully.",
-      data: airportData,
+      data: paginateResults(
+        airportData,
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error: any) {
     console.error("Error fetching airport details:", error.message);
@@ -227,7 +232,11 @@ export const findCars = async (
     return res.status(200).json({
       success: true,
       message: "Car transfer search completed successfully with a 55% markup.",
-      data: carsWithMarkup,
+      data: paginateResults(
+        carsWithMarkup,
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error: any) {
     console.error("Car transfer error:", error);

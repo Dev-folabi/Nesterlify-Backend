@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import Notification from "../models/notification.model";
 import { errorHandler } from "../middleware/errorHandler";
 import { customRequest } from "../types/requests";
-
+import { paginateResults } from "../function";
 
 // Get all notifications for a user
 export const getNotifications = async (
@@ -14,7 +14,7 @@ export const getNotifications = async (
     const userId = (req as customRequest).user?.id;
     const { category, dateFilter, readStatus } = req.query;
     const filter: any = { userId };
-    
+
     if (category && category !== "all") {
       filter.category = category;
     }
@@ -55,7 +55,11 @@ export const getNotifications = async (
     res.status(200).json({
       success: true,
       message: "Notifications retrieved successfully",
-      data: userNotifications,
+      data: paginateResults(
+        userNotifications,
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error) {
     console.log({ message: "Error retrieving notification", error });
@@ -86,13 +90,11 @@ export const markAsRead = async (
       if (notification) {
         notification.read = true;
         const updatedNotification = await notification.save();
-        res
-          .status(200)
-          .json({
-            success: true,
-            message: "Notification marked as read",
-            data: updatedNotification,
-          });
+        res.status(200).json({
+          success: true,
+          message: "Notification marked as read",
+          data: updatedNotification,
+        });
       } else {
         errorHandler(res, 404, "Notification not found");
       }

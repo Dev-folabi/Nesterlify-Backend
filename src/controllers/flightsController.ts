@@ -44,7 +44,11 @@ export const searchLocation = async (
     res.status(200).json({
       success: true,
       message: "Locations retrieved successfully",
-      data: response.result,
+      data: paginateResults(
+        response.result.data,
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error: any) {
     next(error);
@@ -182,7 +186,11 @@ export const searchFlights = async (
     res.status(200).json({
       success: true,
       message: "Flight search completed successfully with a 50% markup.",
-      data: paginateResults(filteredByStops, parseInt(req.query?.page as string, 10), parseInt(req.query?.limit as string, 10)),
+      data: paginateResults(
+        filteredByStops,
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error: any) {
     console.error("Flight search error:", error);
@@ -263,7 +271,7 @@ export const searchMultiCityFlights = async (
         if (airlines) params.includedAirlineCodes = airlines;
 
         const response = await amadeus.shopping.flightOffersSearch.get(params);
-console.log(response.data);
+        console.log(response.data);
         if (!response.data || !Array.isArray(response.data)) {
           return errorHandler(res, 500, "Unexpected API response format.");
         }
@@ -334,7 +342,11 @@ console.log(response.data);
     res.status(200).json({
       success: true,
       message: "Multi-city search completed successfully with markup applied.",
-      data: paginateResults(results, parseInt(req.query?.page as string, 10), parseInt(req.query?.limit as string, 10)),
+      data: paginateResults(
+        results,
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error: any) {
     console.error("Multi-city flight search error:", error);
@@ -397,7 +409,11 @@ export const confirmFlightPricing = async (
     res.status(200).json({
       success: true,
       message: "Flight pricing retrieved successfully.",
-      data: paginateResults(updatedFlights, parseInt(req.query?.page as string, 10), parseInt(req.query?.limit as string, 10)),
+      data: paginateResults(
+        updatedFlights,
+        parseInt(req.query?.page as string, 10),
+        parseInt(req.query?.limit as string, 10)
+      ),
     });
   } catch (error: any) {
     console.error("Flight pricing error:", error);
