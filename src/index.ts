@@ -4,7 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import api from "./routes/api";
 import connectDB from "./database/db";
-import { rateLimiter } from "./middleware/verify";
+import { blockBots, rateLimiter } from "./middleware/verify";
 
 // Dotenv config
 dotenv.config();
@@ -17,7 +17,7 @@ const port = process.env.PORT || 8081;
 const allowedOrigins = [
   "https://nesterlify.com",
   "https://nesterlify-frontend.vercel.app",
-  "http://localhost:5173"
+  "http://localhost:5173",
 ];
 
 // Middleware
@@ -35,7 +35,12 @@ app.use(
   })
 );
 
-app.use(rateLimiter)
+// bot-blocking middleware
+app.use(blockBots);
+
+// Rate limiter middleware
+app.use(rateLimiter);
+
 app.use(express.json());
 app.use(morgan("combined"));
 
