@@ -10,6 +10,7 @@ import gatepayRoutes from "./gatepay.route";
 import vacationRoutes from "./vacation.route";
 import nowpaymentRoutes from "./nowpayment.route";
 import notificationRoutes from "./notification.route";
+import userBookingRoutes from "./userBooking.route";
 import { verifyToken } from "../middleware/verify";
 const router: Router = Router();
 
@@ -24,5 +25,6 @@ router.use("/vacation", vacationRoutes);
 router.use("/newsletter", newsletterRoutes);
 router.use("/nowpayment", nowpaymentRoutes);
 router.use("/notifications", verifyToken, notificationRoutes);
+router.use("/bookings", verifyToken, userBookingRoutes);
 
 export default router;

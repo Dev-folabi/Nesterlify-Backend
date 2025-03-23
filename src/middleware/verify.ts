@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { errorHandler } from "./errorHandler";
 import User from "../models/user.model";
+import rateLimit from "express-rate-limit";
 
 // Define a custom request type to include user data
 export interface CustomRequest extends Request {
@@ -16,7 +17,11 @@ interface DecodedToken {
 }
 
 // Verify JWT Token
-export const verifyToken = async (req: CustomRequest, res: Response, next: NextFunction): Promise<void> => {
+export const verifyToken = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -29,7 +34,10 @@ export const verifyToken = async (req: CustomRequest, res: Response, next: NextF
       return errorHandler(res, 401, "Token not provided");
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as DecodedToken;
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET as string
+    ) as DecodedToken;
     const user = await User.findById(decoded.id);
 
     if (!user) {
@@ -59,3 +67,14 @@ export const isAdmin = (...roles: string[]) => {
     next();
   };
 };
+
+// Rate Limit
+export const rateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: {
+    success: false,
+    message: "Too many requests from this IP, please try again later.",
+  },
+  headers: true, // Send rate limit info in response headers
+});

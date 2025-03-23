@@ -10,6 +10,9 @@ import { bookHotel, processingHotelBooking } from "./hotelsController";
 import { sendMail } from "../utils/sendMail";
 import User from "../models/user.model";
 import Notification from "../models/notification.model";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // Get Currencies
 export const getNowPaymentCurrencies = async (
@@ -239,6 +242,27 @@ export const nowPaymentWebhook = async (
   try {
     console.log("NOWPayments Webhook Notification:", req.body);
 
+    const IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET!;
+
+     // Extract signature from headers
+     const nowPaymentsSig = req.headers["x-nowpayments-sig"] as string;
+
+      if (!nowPaymentsSig) {
+        return res.status(400).json({ success: false, message: "Missing signature" });
+      }
+  
+      // Generate the HMAC signature
+      const sortedParams = JSON.stringify(req.body, Object.keys(req.body).sort());
+      const generatedSignature = crypto
+        .createHmac("sha512", IPN_SECRET)
+        .update(sortedParams)
+        .digest("hex");
+  
+      // Compare the signatures
+      if (generatedSignature !== nowPaymentsSig) {
+        return res.status(403).json({ success: false, message: "Invalid signature" });
+      }
+
     const { payment_id, payment_status, order_id } = req.body;
 
     if (!payment_id || !payment_status || !order_id) {
@@ -258,6 +282,14 @@ export const nowPaymentWebhook = async (
       return res
         .status(404)
         .json({ success: false, message: "Booking not found" });
+    }
+
+    // Prevent duplicate booking confirmation
+    if (
+      booking.paymentDetails.nowPaymentId === payment_id &&
+      booking.paymentDetails.paymentStatus === "completed"
+    ) {
+      return res.status(200).json({ returnCode: "SUCCESS" });
     }
 
     const bookingType = booking.bookingType;
@@ -335,8 +367,8 @@ export const nowPaymentWebhook = async (
       case "failed":
         booking.paymentDetails.paymentStatus = "failed";
         booking.bookingStatus = "failed";
-        await booking.save(); // Save the failed status
-        return res.status(200).json({ returnCode: "SUCCESS" }); // Ensure webhook doesn't retry
+        await booking.save();
+        return res.status(200).json({ returnCode: "SUCCESS" });
 
       default:
         return res

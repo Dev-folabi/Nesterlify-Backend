@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import api from "./routes/api";
 import connectDB from "./database/db";
+import { rateLimiter } from "./middleware/verify";
 
 // Dotenv config
 dotenv.config();
@@ -34,6 +35,7 @@ app.use(
   })
 );
 
+app.use(rateLimiter)
 app.use(express.json());
 app.use(morgan("combined"));
 

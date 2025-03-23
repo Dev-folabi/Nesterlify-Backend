@@ -1,4 +1,4 @@
-import { body, param } from "express-validator";
+import { body, param, query } from "express-validator";
 import { handleValidationErrors } from "../index";
 
 export const validateEditProfile = [
@@ -159,5 +159,40 @@ export const validateEmailToggle = [
   body("emailToggle")
     .isBoolean()
     .withMessage("Email toggle must be a boolean value"),
+  handleValidationErrors,
+];
+
+/**
+ * Validation for User Bookings
+ */
+export const validateUserBookings = [
+  query("bookingType")
+    .optional()
+    .isIn(["flight", "hotel", "car"])
+    .withMessage("Booking type must be 'flight', 'hotel', or 'car'"),
+  query("bookingStatus")
+    .optional()
+    .isIn(["confirmed", "pending", "cancelled"])
+    .withMessage("Booking status must be 'confirmed', 'pending', or 'cancelled'"),
+  query("page")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Page must be a positive integer"),
+  query("limit")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Limit must be a positive integer"),
+  handleValidationErrors,
+];
+
+/**
+ * Validation for Booking by ID
+ */
+export const validateBookingById = [
+  param("bookingId")
+    .notEmpty()
+    .withMessage("Booking ID is required")
+    .isMongoId()
+    .withMessage("Booking ID must be a valid MongoDB ID"),
   handleValidationErrors,
 ];
