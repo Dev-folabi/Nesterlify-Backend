@@ -13,25 +13,27 @@ const app: Express = express();
 
 // Environmental variables
 const port = process.env.PORT || 8081;
-// const allowedOrigins = [
-//   "https://nesterlify.com",
-//   "https://nesterlify-v2.vercel.app",
-//   "http://localhost:5173",
-// ];
+const allowedOrigins = [
+  "https://nesterlify.com",
+  "https://nesterlify-frontend.vercel.app",
+  "http://localhost:5173"
+];
 
-// Middlewares
-// app.use(
-//   cors({
-//     origin: (origin, callback) => {
-//       if (!origin || allowedOrigins.includes(origin)) {
-//         callback(null, true);
-//       } else {
-//         callback(new Error("Not allowed by CORS"));
-//       }
-//     },
-//     credentials: true,
-//   })
-// );
+// Middleware
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.error(`Blocked by CORS: ${origin}`);
+        callback(null, false);
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use(morgan("combined"));
 
