@@ -38,6 +38,8 @@ app.use(
 // bot-blocking middleware
 app.use(blockBots);
 
+app.set("trust proxy", 1);
+
 // Rate limiter middleware
 app.use(rateLimiter);
 
