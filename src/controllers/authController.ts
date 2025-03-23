@@ -118,7 +118,8 @@ export const activate = async (
     res.status(200).json({
       success: true,
       message: "Account activated.",
-      data: { user: omit(newUser.toObject(), ["password"]), token },
+      data: omit(newUser.toObject(), ["password"]),
+      token,
     });
   } catch (error) {
     next(error);
@@ -199,7 +200,8 @@ export const signin = async (
     res.status(200).json({
       success: true,
       message: "Signin successful.",
-      data: { user: omit(user.toObject(), ["password"]), token },
+      data: omit(user.toObject(), ["password"]),
+      token,
     });
   } catch (error) {
     next(error);
