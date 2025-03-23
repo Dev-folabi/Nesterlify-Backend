@@ -95,139 +95,81 @@ export const findCars = async (
   next: NextFunction
 ) => {
   try {
-    // Extract filter query parameters
-    const {
-      minPrice,
-      maxPrice,
-      sortBy,
-      rating,
-      carType,
-      transmission,
-      cancellationPolicy,
-    } = req.query;
+    const { minPrice, maxPrice, sortBy, carType, cancellationPolicy } = req.query;
+    const { startLocationCode, endAddressLine, endCountryCode, endGeoCode, startDateTime } = req.body;
 
-    // Extract mandatory fields from body
-    const {
-      startLocationCode,
-      endAddressLine,
-      endCountryCode,
-      endGeoCode,
-      startDateTime,
-    } = req.body;
-
-    // Validate mandatory fields
-    if (
-      !startLocationCode ||
-      !endAddressLine ||
-      !endCountryCode ||
-      !endGeoCode ||
-      !startDateTime
-    ) {
+    if (!startLocationCode || !endAddressLine || !endCountryCode || !endGeoCode || !startDateTime) {
       return res.status(400).json({
         success: false,
-        error:
-          "Missing required parameters: startLocationCode, endAddressLine, endCountryCode, endGeoCode, startDateTime",
+        error: "Missing required parameters: startLocationCode, endAddressLine, endCountryCode, endGeoCode, startDateTime",
       });
     }
 
-    // Construct Amadeus API request parameters
-    const params: any = {
-      startLocationCode,
-      endAddressLine,
-      endCountryCode,
-      endGeoCode,
-      startDateTime,
-    };
+    const params: any = { startLocationCode, endAddressLine, endCountryCode, endGeoCode, startDateTime };
 
-    // Fetch car transfer offers from Amadeus API using the correct endpoint
     const response = await amadeus.shopping.transferOffers.post(params);
     const carOffers = response.data || [];
 
-    // Apply filters
     let filteredCars = carOffers;
 
-    if (minPrice) {
-      filteredCars = filteredCars.filter(
-        (car: any) =>
-          parseFloat(car.price.total) >= parseFloat(minPrice as string)
-      );
-    }
-    if (maxPrice) {
-      filteredCars = filteredCars.filter(
-        (car: any) =>
-          parseFloat(car.price.total) <= parseFloat(maxPrice as string)
-      );
-    }
-    if (rating) {
-      filteredCars = filteredCars.filter(
-        (car: any) => car.rating && car.rating >= Number(rating)
-      );
-    }
+
+    // Car Type Filtering
     if (carType) {
       const carTypesArray = (carType as string).split(",");
       filteredCars = filteredCars.filter(
-        (car: any) =>
-          car.vehicle.category && carTypesArray.includes(car.vehicle.category)
+        (car: any) => car.vehicle.category && carTypesArray.includes(car.vehicle.category)
       );
     }
-    if (transmission) {
-      const transmissionArray = (transmission as string).split(",");
+
+    // Cancellation Policy Filtering
+    if (cancellationPolicy) {
       filteredCars = filteredCars.filter(
         (car: any) =>
-          car.vehicle.transmission &&
-          transmissionArray.includes(car.vehicle.transmission)
+          car.cancellationRules.some((rule: any) =>
+            rule.ruleDescription.toLowerCase().includes((cancellationPolicy as string).toLowerCase())
+          )
       );
     }
-    if (cancellationPolicy) {
-      if (cancellationPolicy === "Fully refundable") {
-        filteredCars = filteredCars.filter(
-          (car: any) => car.cancellationPolicy === "FULLY_REFUNDABLE"
-        );
-      } else if (cancellationPolicy === "Non-refundable") {
-        filteredCars = filteredCars.filter(
-          (car: any) => car.cancellationPolicy === "NON_REFUNDABLE"
-        );
-      }
+
+    // Apply a 55% markup on the base price
+    const carsWithMarkup = filteredCars.map((car: any) => {
+      const originalPrice = parseFloat(car.quotation.base.monetaryAmount);
+      const markupPercentage = 0.55;
+      const newPrice = originalPrice * (1 + markupPercentage);
+
+      return {
+        ...car,
+        quotation: {
+          ...car.quotation,
+          total: newPrice.toFixed(2),
+        },
+      };
+    });
+
+    // Apply price filtering
+if (minPrice) {
+  filteredCars = carsWithMarkup.filter(
+    (car: any) => parseFloat(car.quotation.total) >= parseFloat(minPrice as string)
+  );
+}
+
+if (maxPrice) {
+  filteredCars = filteredCars.filter(
+    (car: any) => parseFloat(car.quotation.total) <= parseFloat(maxPrice as string)
+  );
+}
+
+// Apply sorting
+if (sortBy) {
+  filteredCars.sort((a: any, b: any) => {
+    if (sortBy === "low-to-high" || sortBy === "best-price") {
+      return parseFloat(a.quotation.total) - parseFloat(b.quotation.total);
+    } else if (sortBy === "high-to-low") {
+      return parseFloat(b.quotation.total) - parseFloat(a.quotation.total);
     }
-
-    const carsWithMarkup = filteredCars
-      .filter((car: any) => car.quotation && car.quotation.base) // Ensure price exists
-      .map((car: any) => {
-        const originalPrice = parseFloat(car.quotation.base.monetaryAmount);
-        const markupPercentage = 0.55;
-        const newPrice = originalPrice * (1 + markupPercentage);
-
-        return {
-          ...car,
-          quotation: {
-            ...car.quotation,
-            total: newPrice.toFixed(2),
-          },
-        };
-      });
-
-    // Sorting logic
-    if (sortBy) {
-      if (sortBy === "low-to-high") {
-        carsWithMarkup.sort(
-          (a: any, b: any) =>
-            parseFloat(a.price.total) - parseFloat(b.price.total)
-        );
-      } else if (sortBy === "high-to-low") {
-        carsWithMarkup.sort(
-          (a: any, b: any) =>
-            parseFloat(b.price.total) - parseFloat(a.price.total)
-        );
-      } else if (sortBy === "popular") {
-        carsWithMarkup.sort(
-          (a: any, b: any) => (b.popularity || 0) - (a.popularity || 0)
-        ); // Assuming popularity is provided
-      } else if (sortBy === "rating") {
-        carsWithMarkup.sort(
-          (a: any, b: any) => (b.rating || 0) - (a.rating || 0)
-        );
-      }
-    }
+    return 0;
+  });
+}
 
     return res.status(200).json({
       success: true,
@@ -243,6 +185,7 @@ export const findCars = async (
     next(error);
   }
 };
+
 
 export const processingCarBooking = async (
   userId: string,

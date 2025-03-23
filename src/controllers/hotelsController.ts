@@ -1,6 +1,6 @@
 import { Duffel } from "@duffel/api";
 import axios from "axios";
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { errorHandler } from "../middleware/errorHandler";
 import Booking from "../models/booking.model";
 import { paginateResults } from "../function";
@@ -271,7 +271,8 @@ interface RecheckRateRequest {
 // Quote Booking
 export const quoteBooking = async (
   req: Request<RecheckRateRequest, {}, {}>,
-  res: Response
+  res: Response,
+  next: NextFunction
 ) => {
   const { rate_id } = req.params;
   if (!rate_id) {
@@ -303,7 +304,7 @@ export const quoteBooking = async (
     });
   } catch (error: any) {
     console.error(error);
-    res.status(500).json({ error: error.message || "Internal Server Error" });
+    next(error)
   }
 };
 
