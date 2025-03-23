@@ -25,12 +25,12 @@ const NotificationSchema = new Schema<INotification>(
     category: {
       type: String,
       enum: [
-        "Hotel booking",
-        "Flight booking",
-        "Activity booking",
-        "Car booking",
-        "Transaction",
-        "General",
+        "hotel",
+        "flight",
+        "activity",
+        "car",
+        "transaction",
+        "general",
       ],
       required: true,
     },

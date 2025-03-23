@@ -7,11 +7,11 @@ export const validateGetNotifications = [
     .isString()
     .withMessage("Category must be a string")
     .isIn([
-      "Hotel booking",
+      "Hotel",
       "all",
-      "Flight booking",
-      "Activity booking",
-      "Car booking",
+      "Flight",
+      "Activity",
+      "Car",
       "Transaction",
       "General",
     ])

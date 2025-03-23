@@ -190,8 +190,8 @@ export const createGatePayOrder = async (
       returnUrl: GATEPAY_RETURN_URL!,
       cancelUrl: GATEPAY_CANCEL_URL!,
       merchantUserId: Number(GATEPAY_MERCHANT_USERID),
-      chain: GATEPAY_CHAIN, 
-      fullCurrType: GATEPAY_FULL_CURR_TYPE, 
+      chain: GATEPAY_CHAIN,
+      fullCurrType: GATEPAY_FULL_CURR_TYPE,
     };
 
     const bodyString = JSON.stringify(payload);
@@ -221,25 +221,25 @@ export const createGatePayOrder = async (
         email: user?.email || "",
         subject:
           response.data.status === "SUCCESS"
-            ? "Booking Initiated, please proceed with payment"
-            : "Booking Failed",
-        message: `Dear Customer,
-
-    Your booking has been ${response.data.status === "SUCCESS" ? "successfully initiated" : "failed"}. Your order ID is ${orderId}.
-
-    ${response.data.status === "SUCCESS" ? "Thank you for choosing our service." : "Please try again or contact support."}
-
-    Best regards,
-    The Nesterlify Team`,
+            ? `${bookingType.toUpperCase()} - Booking Initiated`
+            : `${bookingType.toUpperCase()} - Booking Failed`,
+        message: `Dear ${user?.fullName || "Customer"},
+    
+        Your ${bookingType} booking has been ${response.data.status === "SUCCESS" ? "successfully initiated, please proceed with payment" : "failed"}. Your order ID is ${orderId}.
+    
+        ${response.data.status === "SUCCESS" ? "Thank you for choosing our service." : "Please try again or contact support."}
+    
+        Best regards,
+        The Nesterlify Team`,
       }),
       Notification.create({
         userId,
         title:
           response.data.status === "SUCCESS"
-            ? "Booking Initiated"
-            : "Booking Failed",
-        message: `Your booking with order ID ${orderId} has been ${response.data.status === "SUCCESS" ? "successfully initiated, please proceed with payment" : "failed"}.`,
-        category: `${bookingType} Booking`,
+            ? `${bookingType.toUpperCase()} - Booking Initiated`
+            : `${bookingType.toUpperCase()} - Booking Failed`,
+        message: `Your ${bookingType} booking with order ID ${orderId} has been ${response.data.status === "SUCCESS" ? "successfully initiated, please proceed with payment" : "failed"}.`,
+        category: `${bookingType}`,
       }),
     ]);
 
@@ -353,7 +353,7 @@ export const gatePayWebhook = async (
           bizStatus === "PAY_SUCCESS" ? "Payment Successful" : "Payment Failed",
         message: `Dear ${user?.fullName || "Customer"},
     
-        Your payment for booking with order ID ${orderId} has been ${bizStatus === "PAY_SUCCESS" ? "successfully processed" : "failed"}.
+        Your payment for ${booking.bookingType} booking with order ID ${orderId} has been ${bizStatus === "PAY_SUCCESS" ? "successfully processed" : "failed"}.
 
         Thank you for choosing our service.
 
@@ -364,8 +364,8 @@ export const gatePayWebhook = async (
         userId: booking.userId,
         title:
           bizStatus === "PAY_SUCCESS" ? "Payment Successful" : "Payment Failed",
-        message: `Your payment for booking with order ID ${orderId} has been ${bizStatus === "PAY_SUCCESS" ? "processed successfully" : "failed"}.`,
-        category: `${booking.bookingType} Booking`,
+        message: `Your payment for ${booking.bookingType} booking with order ID ${orderId} has been ${bizStatus === "PAY_SUCCESS" ? "processed successfully" : "failed"}.`,
+        category: `${booking.bookingType}`,
       }),
     ]);
 

@@ -115,7 +115,8 @@ export const createOrder = async (
         .json({ success: false, message: "Unauthorized, pls login" });
     const paymentMethod = "Binance Pay";
 
-    const orderId = `ORD-${crypto.randomBytes(4).toString("hex")}`;
+    const cryptId = crypto.randomBytes(4).toString("hex");
+    const orderId = `ORD-${cryptId}`;
 
     // Booking Logics
     switch (bookingType) {
@@ -164,15 +165,15 @@ export const createOrder = async (
           .status(400)
           .json({ success: false, message: "Invalid booking type" });
     }
-
+    console.log({ orderId });
     const payload: BinanceOrderPayload = {
       env: { terminalType: "WEB" },
-      merchantTradeNo: orderId,
+      merchantTradeNo: cryptId,
       orderAmount: parseFloat(amount.toFixed(2)),
       currency: "USDT",
       goods: {
-        goodsType: "Booking",
-        goodsCategory: bookingType,
+        goodsType: "02",
+        goodsCategory: "Z000",
         referenceGoodsId: orderId,
         goodsName: "Booking Payment",
         goodsDetail: `Payment for ${bookingType} booking`,
@@ -207,11 +208,11 @@ export const createOrder = async (
         email: user?.email || "",
         subject:
           response.data.status === "SUCCESS"
-            ? "Booking Initiated, please proceed with payment"
-            : "Booking Failed",
-        message: `Dear Customer,
+            ? `${bookingType.toUpperCase()} - Booking Initiated`
+            : `${bookingType.toUpperCase()} - Booking Failed`,
+        message: `Dear ${user?.fullName || "Customer"},
 
-    Your booking has been ${response.data.status === "SUCCESS" ? "successfully initiated" : "failed"}. Your order ID is ${orderId}.
+    Your ${bookingType} booking has been ${response.data.status === "SUCCESS" ? "successfully initiated, please proceed with payment" : "failed"}. Your order ID is ${orderId}.
 
     ${response.data.status === "SUCCESS" ? "Thank you for choosing our service." : "Please try again or contact support."}
 
@@ -222,10 +223,10 @@ export const createOrder = async (
         userId,
         title:
           response.data.status === "SUCCESS"
-            ? "Booking Initiated"
-            : "Booking Failed",
-        message: `Your booking with order ID ${orderId} has been ${response.data.status === "SUCCESS" ? "successfully initiated, please proceed with payment" : "failed"}.`,
-        category: `${bookingType} Booking`,
+            ? `${bookingType.toUpperCase()} - Booking Initiated`
+            : `${bookingType.toUpperCase()} - Booking Failed`,
+        message: `Your ${bookingType} booking with order ID ${orderId} has been ${response.data.status === "SUCCESS" ? "successfully initiated, please proceed with payment" : "failed"}.`,
+        category: `${bookingType}`,
       }),
     ]);
 
@@ -278,21 +279,20 @@ export const binanceWebhook = async (
     const { data, bizStatus } = req.body;
     const { merchantTradeNo } = data;
 
+    const orderId = `ORD-${merchantTradeNo}`;
     const booking = await Booking.findOne({
-      "paymentDetails.transactionId": merchantTradeNo,
+      "paymentDetails.transactionId": orderId,
     });
 
     if (!booking) {
-      console.error(
-        ` Booking not found for transaction ID: ${merchantTradeNo}`
-      );
+      console.error(` Booking not found for transaction ID: ${orderId}`);
       return res
         .status(404)
         .json({ success: false, message: "Booking not found" });
     }
 
     console.log(
-      ` Webhook received for booking ID: ${merchantTradeNo} - Status: ${bizStatus}`
+      ` Webhook received for booking ID: ${orderId} - Status: ${bizStatus}`
     );
 
     // Prevent Duplicate Processing
@@ -304,13 +304,13 @@ export const binanceWebhook = async (
     if (bizStatus === "PAY_SUCCESS") {
       switch (bookingType) {
         case "flight":
-          await bookFlight(merchantTradeNo);
+          await bookFlight(orderId);
           break;
         case "hotel":
-          await bookHotel(merchantTradeNo);
+          await bookHotel(orderId);
           break;
         case "car":
-          await bookCarTransfer(merchantTradeNo);
+          await bookCarTransfer(orderId);
           break;
         case "vacation":
           console.log("Processing vacation booking...");
@@ -346,7 +346,7 @@ export const binanceWebhook = async (
           subject: "Payment Successful",
           message: `Dear ${user?.fullName || "Customer"},
           
-          Your payment for booking with order ID ${merchantTradeNo} has been successfully processed.
+          Your payment for ${bookingType} booking with order ID ${orderId} has been successfully processed.
 
           Thank you for choosing our service.
 
@@ -356,8 +356,8 @@ export const binanceWebhook = async (
         Notification.create({
           userId: booking.userId,
           title: "Payment Successful",
-          message: `Your payment for booking with order ID ${merchantTradeNo} has been successfully processed.`,
-          category: `${bookingType} Booking`,
+          message: `Your payment for ${bookingType} booking with order ID ${orderId} has been successfully processed.`,
+          category: `${bookingType}`,
         }),
       ]);
     }

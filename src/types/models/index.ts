@@ -239,10 +239,10 @@ export interface INotification extends Document {
   message: string;
   read: boolean;
   category:
-    | "Hotel booking"
-    | "Flight booking"
-    | "Activity booking"
-    | "Car booking"
+    | "hotel"
+    | "flight"
+    | "activity"
+    | "car"
     | "Transaction"
     | "General";
   createdAt: Date;

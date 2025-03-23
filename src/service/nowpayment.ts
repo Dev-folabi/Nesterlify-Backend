@@ -45,7 +45,7 @@ class NowPaymentsService {
         "Error fetching currencies:",
         error.response?.data || error.message
       );
-      return null;
+      return error.response?.data?.message;
     }
   }
 
@@ -66,7 +66,7 @@ class NowPaymentsService {
         "Error fetching currencies:",
         error.response?.data || error.message
       );
-      return null;
+      return error.response?.data?.message;
     }
   }
 
@@ -84,7 +84,7 @@ class NowPaymentsService {
         "Error fetching currencies:",
         error.response?.data || error.message
       );
-      return null;
+      return error.response?.data?.message;
     }
   }
 }

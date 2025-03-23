@@ -111,6 +111,7 @@ export const createOrder = async (
     // Todo: implement Vacation checks
 
     const userId = (req as customRequest).user?.id;
+    const user = await User.findById(userId);
     if (!userId)
       return res
         .status(401)
@@ -176,6 +177,7 @@ export const createOrder = async (
       order_description: `Payment for ${bookingType} booking`,
       is_fixed_rate: false,
       is_fee_paid_by_user: true,
+      customer_email: user?.email,
     };
 
     const response = await nowpayment.createPayment(paymentData);
@@ -183,21 +185,20 @@ export const createOrder = async (
     if (!response || !response.payment_id || !response.payment_status) {
       return res.status(500).json({
         success: false,
-        message: "Failed to create payment. Please try again.",
+        message: response || "Failed to create payment. Please try again.",
       });
     }
 
-    const user = await User.findById(userId);
     await Promise.all([
       sendMail({
         email: user?.email || "",
         subject:
           response.payment_status === "waiting"
-            ? "Booking Initiated, please proceed with payment"
-            : "Booking Failed",
-        message: `Dear Customer,
+            ? `${bookingType.toUpperCase()} - Booking Initiated`
+            : `${bookingType.toUpperCase()} - Booking Failed`,
+        message: `Dear ${user?.fullName || "Customer"},
     
-        Your booking has been ${response.payment_status === "waiting" ? "successfully initiated" : "failed"}. Your order ID is ${orderId}.
+        Your ${bookingType} booking has been ${response.payment_status === "waiting" ? "successfully initiated, please proceed with payment" : "failed"}. Your order ID is ${orderId}.
     
         ${response.payment_status === "waiting" ? "Thank you for choosing our service." : "Please try again or contact support."}
     
@@ -208,10 +209,10 @@ export const createOrder = async (
         userId,
         title:
           response.payment_status === "waiting"
-            ? "Booking Initiated"
-            : "Booking Failed",
-        message: `Your booking with order ID ${orderId} has been ${response.payment_status === "waiting" ? "successfully initiated, please proceed with payment" : "failed"}.`,
-        category: `${bookingType} Booking`,
+            ? `${bookingType.toUpperCase()} - Booking Initiated`
+            : `${bookingType.toUpperCase()} - Booking Failed`,
+        message: `Your ${bookingType} booking with order ID ${orderId} has been ${response.payment_status === "waiting" ? "successfully initiated, please proceed with payment" : "failed"}.`,
+        category: `${bookingType}`,
       }),
     ]);
 
@@ -229,7 +230,7 @@ export const createOrder = async (
   }
 };
 
-// Payment Callback - Confirm Booking
+// Payment webhook - Confirm Booking
 export const nowPaymentWebhook = async (
   req: Request,
   res: Response,
@@ -238,18 +239,20 @@ export const nowPaymentWebhook = async (
   try {
     console.log("NOWPayments Webhook Notification:", req.body);
 
-    const {
-      payment_id,
-      payment_status,
-      order_id,
-      actually_paid,
-      pay_currency,
-    } = req.body;
+    const { payment_id, payment_status, order_id } = req.body;
 
-    // Find the booking with the corresponding transaction ID (order_id)
+    if (!payment_id || !payment_status || !order_id) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid payload" });
+    }
+
+    // Find the booking and populate the user details
     const booking = await Booking.findOne({
       "paymentDetails.transactionId": order_id,
-    });
+    }).populate("userId");
+
+    const user = await User.findById(booking?.userId);
 
     if (!booking) {
       return res
@@ -263,75 +266,83 @@ export const nowPaymentWebhook = async (
       case "waiting":
         booking.paymentDetails.paymentStatus = "pending";
         booking.bookingStatus = "pending";
+        await booking.save(); // Save immediately
         break;
 
       case "confirming":
         booking.paymentDetails.paymentStatus = "processing";
         booking.bookingStatus = "pending";
+        await booking.save();
         break;
 
       case "finished":
-        // Process booking based on type
-        switch (bookingType) {
-          case "flight":
-            await bookFlight(order_id);
-            break;
-          case "hotel":
-            await bookHotel(order_id);
-            break;
-          case "car":
-            await bookCarTransfer(order_id);
-            break;
-          case "vacation":
-            console.log("Processing vacation booking...");
-            break;
-          default:
-            return res
-              .status(400)
-              .json({ success: false, message: "Invalid booking type" });
+        try {
+          switch (bookingType) {
+            case "flight":
+              await bookFlight(order_id);
+              break;
+            case "hotel":
+              await bookHotel(order_id);
+              break;
+            case "car":
+              await bookCarTransfer(order_id);
+              break;
+            case "vacation":
+              console.log("Processing vacation booking...");
+              break;
+            default:
+              return res
+                .status(400)
+                .json({ success: false, message: "Invalid booking type" });
+          }
+        } catch (err) {
+          console.error("Booking processing error:", err);
+          return res
+            .status(500)
+            .json({ success: false, message: "Booking processing failed" });
         }
 
         booking.paymentDetails.nowPaymentId = payment_id;
         booking.paymentDetails.paymentStatus = "completed";
         booking.bookingStatus = "confirmed";
+        await booking.save();
 
-        // Notify User
-        const user = await User.findById(booking.userId);
-        await Promise.all([
-          sendMail({
-            email: user?.email || "",
-            subject: "Payment Successful",
-            message: `Dear ${user?.fullName || "Customer"},
-            
-            Your payment for booking with order ID ${order_id} has been successfully processed.
-            
-            Thank you for choosing our service.
-            
-            Best regards,
-            The Nesterlify Team`,
-          }),
-          Notification.create({
-            userId: booking.userId,
-            title: "Payment Successful",
-            message: `Your payment for booking with order ID ${order_id} has been successfully processed.`,
-            category: `${bookingType} Booking`,
-          }),
-        ]);
+        // Send email and notification
+        if (user) {
+          await Promise.all([
+            sendMail({
+              email: user.email || "",
+              subject: "Payment Successful",
+              message: `Dear ${user.fullName || "Customer"},
+              
+              Your payment for ${bookingType} booking with order ID ${order_id} has been successfully processed.
+              
+              Thank you for choosing our service.
+              
+              Best regards,
+              The Nesterlify Team`,
+            }),
+            Notification.create({
+              userId: booking.userId,
+              title: "Payment Successful",
+              message: `Your payment for ${bookingType} booking with order ID ${order_id} has been successfully processed.`,
+              category: `${bookingType}`,
+            }),
+          ]);
+        }
         break;
 
       case "failed":
         booking.paymentDetails.paymentStatus = "failed";
         booking.bookingStatus = "failed";
-        return res.status(200).json({ returnCode: "FAIL" });
+        await booking.save(); // Save the failed status
+        return res.status(200).json({ returnCode: "SUCCESS" }); // Ensure webhook doesn't retry
 
       default:
         return res
           .status(400)
           .json({ success: false, message: "Unknown payment status" });
     }
-
-    // Save booking before responding
-    await booking.save();
 
     return res.status(200).json({ returnCode: "SUCCESS" });
   } catch (error) {

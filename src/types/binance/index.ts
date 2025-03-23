@@ -4,7 +4,7 @@ export interface BinanceOrderPayload {
   orderAmount: number;
   currency: string;
   goods: {
-    goodsType: string;
+   goodsType: string;
     goodsCategory: string;
     referenceGoodsId: string;
     goodsName: string;
