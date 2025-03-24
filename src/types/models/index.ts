@@ -243,8 +243,8 @@ export interface INotification extends Document {
     | "flight"
     | "activity"
     | "car"
-    | "Transaction"
-    | "General";
+    | "transaction"
+    | "general";
   createdAt: Date;
   updatedAt: Date;
 }

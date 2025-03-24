@@ -314,7 +314,7 @@ export const verifyPasswordOTP = async (
         userId: user._id,
         title: "Password Reset",
         message: "Your password has been successfully reset.",
-        category: "General",
+        category: "general",
       }),
     ]);
 
