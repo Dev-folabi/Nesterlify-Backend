@@ -221,7 +221,7 @@ export const requestPasswordReset = async (
     if (!user) return errorHandler(res, 404, "User not found.");
 
     const otpCode = Math.floor(100000 + Math.random() * 900000);
-    const expirationTime = new Date(Date.now() + 5 * 60 * 1000);
+    const expirationTime = new Date(Date.now() + 15 * 60 * 1000);
 
     await PasswordReset.updateOne(
       { email },
@@ -238,7 +238,7 @@ export const requestPasswordReset = async (
 
     OTP Code: ${otpCode}
 
-    This code will expire in 5 minutes. If you did not request a password reset, please ignore this email.
+    This code will expire in 15 minutes. If you did not request a password reset, please ignore this email.
 
     Best regards,
     The Nesterlify Team`,
@@ -247,6 +247,33 @@ export const requestPasswordReset = async (
     res
       .status(200)
       .json({ success: true, message: "OTP sent for password reset." });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Verify OTP
+export const verifyOTP = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { otpCode } = req.params;
+    const resetRequest = await PasswordReset.findOne({ otpCode });
+
+    if (
+      !resetRequest ||
+      new Date() > resetRequest.expirationTime ||
+      resetRequest.otpCode !== parseInt(otpCode as string)
+    ) {
+      return errorHandler(res, 400, "Invalid or expired OTP.");
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "OTP verified successfully.",
+    });
   } catch (error) {
     next(error);
   }

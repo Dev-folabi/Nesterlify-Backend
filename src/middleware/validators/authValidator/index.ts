@@ -1,4 +1,4 @@
-import { body } from "express-validator";
+import { body, param, query } from "express-validator";
 import { handleValidationErrors } from "../index";
 
 export const validateSignup = [
@@ -37,6 +37,14 @@ export const validateSignin = [
 
 export const validateRequestPasswordReset = [
   body("email").isEmail().withMessage("Valid email is required"),
+  handleValidationErrors,
+];
+
+export const validateVerifyOTP = [
+  param("otpCode")
+    .isNumeric()
+    .isLength({ min: 6, max: 6 })
+    .withMessage("OTP code must be a 6-digit number"),
   handleValidationErrors,
 ];
 
