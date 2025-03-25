@@ -24,7 +24,8 @@ export const getUserBookings = async (
       query.bookingStatus = bookingStatus;
     }
 
-    const bookings = await Booking.find(query);
+    const bookings = await Booking.find(query).sort({ createdAt: -1 });
+    
     res.status(200).json({
       success: true,
       message: "Bookings retrieved successfully",

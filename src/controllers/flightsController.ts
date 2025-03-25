@@ -588,7 +588,7 @@ export const bookFlight = async (offerId: string) => {
 
     // Map flight offers
     const flightOffers = booking.flights.map((flight, index) => ({
-      id: (index + 1).toString(),
+      id: (`${index}`+ 1).toString(),
       type: "flight-offer",
       validatingAirlineCodes: flight.validatingAirlineCodes,
       source: flight.source,
@@ -667,7 +667,7 @@ export const bookFlight = async (offerId: string) => {
 
     const formattedTravelers = travelers.map(
       (traveler: any, index: number) => ({
-        id: (index + 1).toString(),
+        id: (`${index}`+1).toString(),
         dateOfBirth: traveler.dateOfBirth,
         name: {
           firstName: traveler.name.firstName.toUpperCase(),
