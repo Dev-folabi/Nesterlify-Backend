@@ -31,7 +31,7 @@ export const signup = async (
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const activationCode = Math.floor(100000 + Math.random() * 900000);
-    const expirationTime = new Date(Date.now() + 5 * 60 * 1000);
+    const expirationTime = new Date(Date.now() + 15 * 60 * 1000);
 
     if (await Activation.findOne({ email })) {
       await Activation.deleteOne({ email });
@@ -58,7 +58,7 @@ export const signup = async (
 
   Activation Code: ${activationCode}
 
-  Please note that this code will expire in 5 minutes. If you did not initiate this request, please disregard this email.
+  Please note that this code will expire in 15 minutes. If you did not initiate this request, please disregard this email.
 
   Best regards,
   The Nesterlify Team`,
@@ -142,7 +142,7 @@ export const resendOTP = async (
 
     const activationCode = Math.floor(100000 + Math.random() * 900000);
     userPending.activationCode = activationCode;
-    userPending.expirationTime = new Date(Date.now() + 5 * 60 * 1000);
+    userPending.expirationTime = new Date(Date.now() + 15 * 60 * 1000);
     await userPending.save();
 
     await sendMail({
@@ -154,7 +154,7 @@ export const resendOTP = async (
 
   Activation Code: ${activationCode}
 
-  This code will expire in 5 minutes. If you did not request this code, please ignore this email.
+  This code will expire in 15 minutes. If you did not request this code, please ignore this email.
 
   Best regards,
   The Nesterlify Team`,
