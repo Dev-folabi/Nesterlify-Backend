@@ -95,39 +95,60 @@ export const findCars = async (
   next: NextFunction
 ) => {
   try {
-    const { minPrice, maxPrice, sortBy, carType, cancellationPolicy } = req.query;
-    const { startLocationCode, endAddressLine, endCountryCode, endGeoCode, startDateTime } = req.body;
+    const { minPrice, maxPrice, sortBy, carType, cancellationPolicy } =
+      req.query;
+    const {
+      startLocationCode,
+      endAddressLine,
+      endCountryCode,
+      endGeoCode,
+      startDateTime,
+    } = req.body;
 
-    if (!startLocationCode || !endAddressLine || !endCountryCode || !endGeoCode || !startDateTime) {
+    if (
+      !startLocationCode ||
+      !endAddressLine ||
+      !endCountryCode ||
+      !endGeoCode ||
+      !startDateTime
+    ) {
       return res.status(400).json({
         success: false,
-        error: "Missing required parameters: startLocationCode, endAddressLine, endCountryCode, endGeoCode, startDateTime",
+        error:
+          "Missing required parameters: startLocationCode, endAddressLine, endCountryCode, endGeoCode, startDateTime",
       });
     }
 
-    const params: any = { startLocationCode, endAddressLine, endCountryCode, endGeoCode, startDateTime };
+    const params: any = {
+      startLocationCode,
+      endAddressLine,
+      endCountryCode,
+      endGeoCode,
+      startDateTime,
+    };
 
     const response = await amadeus.shopping.transferOffers.post(params);
     const carOffers = response.data || [];
 
     let filteredCars = carOffers;
 
-
     // Car Type Filtering
     if (carType) {
       const carTypesArray = (carType as string).split(",");
       filteredCars = filteredCars.filter(
-        (car: any) => car.vehicle.category && carTypesArray.includes(car.vehicle.category)
+        (car: any) =>
+          car.vehicle.category && carTypesArray.includes(car.vehicle.category)
       );
     }
 
     // Cancellation Policy Filtering
     if (cancellationPolicy) {
-      filteredCars = filteredCars.filter(
-        (car: any) =>
-          car.cancellationRules.some((rule: any) =>
-            rule.ruleDescription.toLowerCase().includes((cancellationPolicy as string).toLowerCase())
-          )
+      filteredCars = filteredCars.filter((car: any) =>
+        car.cancellationRules.some((rule: any) =>
+          rule.ruleDescription
+            .toLowerCase()
+            .includes((cancellationPolicy as string).toLowerCase())
+        )
       );
     }
 
@@ -147,29 +168,31 @@ export const findCars = async (
     });
 
     // Apply price filtering
-if (minPrice) {
-  filteredCars = carsWithMarkup.filter(
-    (car: any) => parseFloat(car.quotation.total) >= parseFloat(minPrice as string)
-  );
-}
-
-if (maxPrice) {
-  filteredCars = filteredCars.filter(
-    (car: any) => parseFloat(car.quotation.total) <= parseFloat(maxPrice as string)
-  );
-}
-
-// Apply sorting
-if (sortBy) {
-  filteredCars.sort((a: any, b: any) => {
-    if (sortBy === "low-to-high" || sortBy === "best-price") {
-      return parseFloat(a.quotation.total) - parseFloat(b.quotation.total);
-    } else if (sortBy === "high-to-low") {
-      return parseFloat(b.quotation.total) - parseFloat(a.quotation.total);
+    if (minPrice) {
+      filteredCars = carsWithMarkup.filter(
+        (car: any) =>
+          parseFloat(car.quotation.total) >= parseFloat(minPrice as string)
+      );
     }
-    return 0;
-  });
-}
+
+    if (maxPrice) {
+      filteredCars = filteredCars.filter(
+        (car: any) =>
+          parseFloat(car.quotation.total) <= parseFloat(maxPrice as string)
+      );
+    }
+
+    // Apply sorting
+    if (sortBy) {
+      filteredCars.sort((a: any, b: any) => {
+        if (sortBy === "low-to-high" || sortBy === "best-price") {
+          return parseFloat(a.quotation.total) - parseFloat(b.quotation.total);
+        } else if (sortBy === "high-to-low") {
+          return parseFloat(b.quotation.total) - parseFloat(a.quotation.total);
+        }
+        return 0;
+      });
+    }
 
     return res.status(200).json({
       success: true,
@@ -185,7 +208,6 @@ if (sortBy) {
     next(error);
   }
 };
-
 
 export const processingCarBooking = async (
   userId: string,
@@ -230,7 +252,11 @@ export const processingCarBooking = async (
   const bookingData = new Booking({
     userId,
     bookingType: "car",
-    car: { carOfferID, carPassengers, note: note || "No special requests" },
+    car: {
+      carOfferID,
+      passengers: carPassengers,
+      note: note || "No special requests",
+    },
     paymentDetails: {
       transactionId: orderId,
       paymentStatus: "pending",
@@ -244,10 +270,10 @@ export const processingCarBooking = async (
   await bookingData.save();
 };
 
-export const bookCarTransfer = async (offerId: string) => {
+export const bookCarTransfer = async (orderId: string) => {
   try {
     const booking = await Booking.findOne({
-      "paymentDetails.transactionId": offerId,
+      "paymentDetails.transactionId": orderId,
     });
 
     if (!booking) {
@@ -283,22 +309,28 @@ export const bookCarTransfer = async (offerId: string) => {
             cvv: PAYMENT_CREDIT_CARD_CVV,
           },
         },
-        extraServices: [
-          {
-            code: "",
-            itemId: "",
-          },
-        ],
+        // extraServices: [
+        //   {
+        //     code: "",
+        //     itemId: "",
+        //   },
+        // ],
       },
     };
+
+    const carOfferID = booking.car[0].carOfferID;
 
     // Call Amadeus Transfer Booking API
     const response = await amadeus.ordering.transferOrders.post(
       JSON.stringify(bookingData),
-      offerId
+      carOfferID
     );
 
     console.log(response.result);
+
+    if (response.result.errors) {
+      throw new Error("Booking failed: " + response.result.errors[0].detail);
+    }
 
     return {
       success: true,

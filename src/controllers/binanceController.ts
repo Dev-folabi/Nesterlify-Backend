@@ -165,7 +165,7 @@ export const createOrder = async (
           .status(400)
           .json({ success: false, message: "Invalid booking type" });
     }
-    console.log({ orderId });
+
     const payload: BinanceOrderPayload = {
       env: { terminalType: "WEB" },
       merchantTradeNo: cryptId,
