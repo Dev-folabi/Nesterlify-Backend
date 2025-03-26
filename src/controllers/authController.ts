@@ -232,7 +232,7 @@ export const requestPasswordReset = async (
     await sendMail({
       email,
       subject: "Password Reset Request",
-      message: `Dear ${user.firstName},
+      message: `Dear ${user.firstName || "User"},
 
     We received a request to reset your password. Please use the following OTP code to reset your password:
 
