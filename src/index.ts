@@ -17,6 +17,7 @@ const port = process.env.PORT || 8081;
 const allowedOrigins = [
   "https://nesterlify.com",
   "https://nesterlify-frontend.vercel.app",
+  "https://nesterlify-frontend2.vercel.app",
   "http://localhost:5173",
 ];
 
