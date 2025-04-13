@@ -223,7 +223,7 @@ export const createGatePayOrder = async (
           response.data.status === "SUCCESS"
             ? `${bookingType.toUpperCase()} - Booking Initiated`
             : `${bookingType.toUpperCase()} - Booking Failed`,
-        message: `Dear ${user?.fullName || "Customer"},
+        message: `Dear ${user?.firstName || "Customer"},
     
         Your ${bookingType} booking has been ${response.data.status === "SUCCESS" ? "successfully initiated, please proceed with payment" : "failed"}. Your order ID is ${orderId}.
     
@@ -351,7 +351,7 @@ export const gatePayWebhook = async (
         email: user?.email || "",
         subject:
           bizStatus === "PAY_SUCCESS" ? "Payment Successful" : "Payment Failed",
-        message: `Dear ${user?.fullName || "Customer"},
+        message: `Dear ${user?.firstName || "Customer"},
     
         Your payment for ${booking.bookingType} booking with order ID ${orderId} has been ${bizStatus === "PAY_SUCCESS" ? "successfully processed" : "failed"}.
 

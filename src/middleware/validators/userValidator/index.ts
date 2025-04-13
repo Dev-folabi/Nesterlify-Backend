@@ -6,10 +6,6 @@ export const validateEditProfile = [
     .optional()
     .isString()
     .withMessage("Username must be a string"),
-  body("fullName")
-    .optional()
-    .isString()
-    .withMessage("FullName must be a string"),
   body("email").optional().isEmail().withMessage("Valid email is required"),
   body("profilePicture")
     .optional()
@@ -25,10 +21,6 @@ export const validateEditProfile = [
     .optional()
     .isString()
     .withMessage("Last name must be a string"),
-  body("middleName")
-    .optional()
-    .isString()
-    .withMessage("Middle name must be a string"),
   body("phoneNumber")
     .optional()
     .isString()

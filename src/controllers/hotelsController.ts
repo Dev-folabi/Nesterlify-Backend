@@ -100,8 +100,8 @@ export const findHotels = async (
   }
 
   for (const guest of guests) {
-    if (guest.type === "child" && !("age" in guest)) {
-      return errorHandler(res, 400, "Age must be provided for child guests");
+    if (guest.type === "child" && (!("age" in guest) || guest.age >= 18)) {
+      return errorHandler(res, 400, "Age must be provided and less than 18 for child guests");
     }
   }
 

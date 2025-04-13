@@ -3,7 +3,8 @@ import mongoose, { Schema, Document } from "mongoose";
 // Activation Model
 interface IActivation extends Document {
   email: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
   username: string;
   password: string;
   activationCode: number;
@@ -12,14 +13,26 @@ interface IActivation extends Document {
 
 const ActivationSchema = new Schema<IActivation>({
   email: { type: String, required: true, unique: true },
-  fullName: { type: String, required: true },
+  firstName: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  lastName: {
+    type: String,
+    required: true,
+    trim: true,
+  },
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   activationCode: { type: Number, required: true },
   expirationTime: { type: Date, required: true },
 });
 
-export const Activation = mongoose.model<IActivation>("Activation", ActivationSchema);
+export const Activation = mongoose.model<IActivation>(
+  "Activation",
+  ActivationSchema
+);
 
 // PasswordReset Model
 interface IPasswordReset extends Document {
@@ -36,4 +49,7 @@ const PasswordResetSchema = new Schema<IPasswordReset>({
   expirationTime: { type: Date, required: true },
 });
 
-export const PasswordReset = mongoose.model<IPasswordReset>("PasswordReset", PasswordResetSchema);
+export const PasswordReset = mongoose.model<IPasswordReset>(
+  "PasswordReset",
+  PasswordResetSchema
+);

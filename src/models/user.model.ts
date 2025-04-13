@@ -1,17 +1,11 @@
 import mongoose, { Schema, Document } from "mongoose";
 import { IUser } from "../types/models";
 
-
 const userSchema = new Schema<IUser>(
   {
     username: {
       type: String,
       unique: true,
-    },
-    fullName: {
-      type: String,
-      required: true,
-      trim: true,
     },
     email: {
       type: String,
@@ -35,9 +29,16 @@ const userSchema = new Schema<IUser>(
     },
     title: String,
     gender: String,
-    firstName: String,
-    lastName: String,
-    middleName: String,
+    firstName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     phoneNumber: {
       type: String,
     },

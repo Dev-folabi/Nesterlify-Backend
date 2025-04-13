@@ -3,7 +3,8 @@ import { handleValidationErrors } from "../index";
 
 export const validateSignup = [
   body("username").notEmpty().withMessage("Username is required"),
-  body("fullName").notEmpty().withMessage("Full name is required"),
+  body("firstName").notEmpty().withMessage("First name is required"),
+  body("lastName").notEmpty().withMessage("Last name is required"),
   body("email").isEmail().withMessage("Valid email is required"),
   body("password")
     .isLength({ min: 6 })

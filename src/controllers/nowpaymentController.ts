@@ -199,7 +199,7 @@ export const createOrder = async (
           response.payment_status === "waiting"
             ? `${bookingType.toUpperCase()} - Booking Initiated`
             : `${bookingType.toUpperCase()} - Booking Failed`,
-        message: `Dear ${user?.fullName || "Customer"},
+        message: `Dear ${user?.firstName || "Customer"},
     
         Your ${bookingType} booking has been ${response.payment_status === "waiting" ? "successfully initiated, please proceed with payment" : "failed"}. Your order ID is ${orderId}.
     
@@ -345,7 +345,7 @@ export const nowPaymentWebhook = async (
             sendMail({
               email: user.email || "",
               subject: "Payment Successful",
-              message: `Dear ${user.fullName || "Customer"},
+              message: `Dear ${user.firstName || "Customer"},
               
               Your payment for ${bookingType} booking with order ID ${order_id} has been successfully processed.
               

@@ -15,7 +15,7 @@ export const signup = async (
   next: NextFunction
 ) => {
   try {
-    const { username, fullName, email, password, confirmPassword } = req.body;
+    const { username, firstName, lastName, email, password, confirmPassword } = req.body;
 
     if (password !== confirmPassword) {
       return errorHandler(res, 400, "Passwords do not match.");
@@ -42,7 +42,8 @@ export const signup = async (
     }
     await Activation.create({
       email,
-      fullName,
+      firstName,
+      lastName,
       username,
       password: hashedPassword,
       activationCode,
@@ -52,7 +53,7 @@ export const signup = async (
     await sendMail({
       email,
       subject: "Account Activation Code",
-      message: `Dear ${fullName},
+      message: `Dear ${firstName},
 
   Thank you for registering with Nesterlify. To complete your registration, please use the following activation code:
 
@@ -105,7 +106,7 @@ export const activate = async (
     await sendMail({
       email: newUser.email,
       subject: "Welcome to Nesterlify!",
-      message: `Dear ${newUser.fullName},
+      message: `Dear ${newUser.firstName},
 
     Welcome to Nesterlify! Your account has been successfully activated.
 
@@ -328,7 +329,7 @@ export const verifyPasswordOTP = async (
       sendMail({
         email,
         subject: "Password Reset Successful",
-        message: `Dear ${user.fullName},
+        message: `Dear ${user.firstName},
 
     Your password has been successfully reset. You can now log in with your new password.
 

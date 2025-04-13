@@ -210,7 +210,7 @@ export const createOrder = async (
           response.data.status === "SUCCESS"
             ? `${bookingType.toUpperCase()} - Booking Initiated`
             : `${bookingType.toUpperCase()} - Booking Failed`,
-        message: `Dear ${user?.fullName || "Customer"},
+        message: `Dear ${user?.firstName || "Customer"},
 
     Your ${bookingType} booking has been ${response.data.status === "SUCCESS" ? "successfully initiated, please proceed with payment" : "failed"}. Your order ID is ${orderId}.
 
@@ -344,7 +344,7 @@ export const binanceWebhook = async (
         sendMail({
           email: user?.email || "",
           subject: "Payment Successful",
-          message: `Dear ${user?.fullName || "Customer"},
+          message: `Dear ${user?.firstName || "Customer"},
           
           Your payment for ${bookingType} booking with order ID ${orderId} has been successfully processed.
 
