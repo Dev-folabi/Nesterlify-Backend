@@ -7,6 +7,7 @@ import { Activation, PasswordReset } from "../models/temporaryData";
 import { sendMail } from "../utils/sendMail";
 import { errorHandler } from "../middleware/errorHandler";
 import Notification from "../models/notification.model";
+import { generateToken } from "../middleware/verify";
 
 // User Signup
 export const signup = async (
@@ -97,11 +98,7 @@ export const activate = async (
     );
     await Activation.deleteOne({ activationCode });
 
-    const token = jwt.sign(
-      { id: newUser._id },
-      process.env.JWT_SECRET as string,
-      { expiresIn: "1h" }
-    );
+    const token = generateToken(newUser)
 
     await sendMail({
       email: newUser.email,
@@ -194,9 +191,7 @@ export const signin = async (
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET as string, {
-      expiresIn: "1h",
-    });
+    const token = generateToken(user)
 
     res.status(200).json({
       success: true,

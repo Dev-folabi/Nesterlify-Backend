@@ -16,6 +16,12 @@ interface DecodedToken {
   id: string;
 }
 
+export const generateToken = (user: any): string => {
+  return jwt.sign({ id: user._id }, process.env.JWT_SECRET as string, {
+    expiresIn: "7d",
+  });
+};
+
 // Verify JWT Token
 export const verifyToken = async (
   req: CustomRequest,
