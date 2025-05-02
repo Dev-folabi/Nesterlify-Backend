@@ -134,7 +134,7 @@ export const searchFlights = async (
 
     const flightsWithMarkup = response.data.map((flight: any) => {
       const originalPrice = parseFloat(flight.price.total);
-      const newPrice = originalPrice * 1.5;
+      const newPrice = originalPrice * 1.4;
 
       return {
         ...flight,
@@ -278,7 +278,7 @@ export const searchMultiCityFlights = async (
 
         const flightsWithMarkup = response.data.map((flight: any) => {
           const originalPrice = parseFloat(flight.price.total);
-          const newPrice = originalPrice * 1.5;
+          const newPrice = originalPrice * 1.4;
 
           return {
             ...flight,
@@ -389,11 +389,11 @@ export const confirmFlightPricing = async (
       });
     }
 
-    // Apply 50% markup to each flight price
+    // Apply 40% markup to each flight price
     const updatedFlights = pricingResponse.data.flightOffers.map(
       (flight: any) => {
         const originalPrice = parseFloat(flight.price.total);
-        const markupPrice = originalPrice * 1.5; // 50% markup
+        const markupPrice = originalPrice * 1.4; // 40% markup
 
         return {
           ...flight,

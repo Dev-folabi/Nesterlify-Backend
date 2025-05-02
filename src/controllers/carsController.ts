@@ -152,10 +152,10 @@ export const findCars = async (
       );
     }
 
-    // Apply a 55% markup on the base price
+    // Apply a 40% markup on the base price
     const carsWithMarkup = filteredCars.map((car: any) => {
       const originalPrice = parseFloat(car.quotation.base.monetaryAmount);
-      const markupPercentage = 0.55;
+      const markupPercentage = 0.40;
       const newPrice = originalPrice * (1 + markupPercentage);
 
       return {

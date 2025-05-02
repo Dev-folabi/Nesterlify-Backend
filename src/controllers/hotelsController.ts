@@ -226,13 +226,13 @@ export const fetchRoomRates = async (
     // Fetch all room rates for the given hotel ID from Duffel
     const rates = await duffel.stays.searchResults.fetchAllRates(id);
 
-    // Apply 50% markup while handling potential missing or invalid values
+    // Apply 40% markup while handling potential missing or invalid values
     const updatedRates = {
       ...rates,
       data: {
         ...rates.data,
         cheapest_rate_total_amount: rates.data.cheapest_rate_total_amount
-          ? (parseFloat(rates.data.cheapest_rate_total_amount) * 1.5).toFixed(2)
+          ? (parseFloat(rates.data.cheapest_rate_total_amount) * 1.4).toFixed(2)
           : rates.data.cheapest_rate_total_amount, // Preserve original if invalid
         accommodation: {
           ...rates.data.accommodation,
@@ -282,13 +282,13 @@ export const quoteBooking = async (
   try {
     const quote = await duffel.stays.quotes.create(rate_id);
 
-    // Apply 50% markup to the total_amount
+    // Apply 40% markup to the total_amount
     const updatedQuote = {
       ...quote,
       data: {
         ...quote.data,
         total_amount: quote.data.total_amount
-          ? (parseFloat(quote.data.total_amount) * 1.5).toFixed(2)
+          ? (parseFloat(quote.data.total_amount) * 1.4).toFixed(2)
           : quote.data.total_amount, // Preserve original if invalid
       },
     };
