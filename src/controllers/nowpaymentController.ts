@@ -178,8 +178,6 @@ export const createOrder = async (
       ipn_callback_url: process.env.NOWPAYMENT_WEBHOOK_URL || "",
       order_id: orderId,
       order_description: `Payment for ${bookingType} booking`,
-      is_fixed_rate: false,
-      is_fee_paid_by_user: true,
       customer_email: user?.email,
     };
 

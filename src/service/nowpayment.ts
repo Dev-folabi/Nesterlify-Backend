@@ -52,6 +52,7 @@ class NowPaymentsService {
   async createPayment(
     paymentData: PaymentRequest
   ): Promise<PaymentResponse | null> {
+    console.log({paymentData})
     try {
       const response = await axios.post<PaymentResponse>(
         `${BASE_URL}/payment`,
