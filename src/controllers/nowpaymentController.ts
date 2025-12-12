@@ -3,10 +3,16 @@ import nowpayment from "../service/nowpayment";
 import crypto from "crypto";
 import { OrderRequest } from "../types/requests";
 import Booking from "../models/booking.model";
-import { bookFlight, processFlightBooking } from "./flightsController";
+import {
+  bookFlight,
+  processFlightBooking,
+  bookCarTransfer,
+  processingCarBooking,
+  bookHotel,
+  processingHotelBooking,
+} from "../function/bookings";
+import { generateOrderId } from "../function";
 import { customRequest } from "../types/requests";
-import { bookCarTransfer, processingCarBooking } from "./carsController";
-import { bookHotel, processingHotelBooking } from "./hotelsController";
 import { sendMail } from "../utils/sendMail";
 import User from "../models/user.model";
 import Notification from "../models/notification.model";
@@ -121,7 +127,7 @@ export const createOrder = async (
         .json({ success: false, message: "Unauthorized, pls login" });
     const paymentMethod = "Now Payment";
 
-    const orderId = `ORD-${crypto.randomBytes(4).toString("hex")}`;
+    const orderId = generateOrderId();
 
     // Booking Logics
     switch (bookingType) {
@@ -242,24 +248,28 @@ export const nowPaymentWebhook = async (
 
     const IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET!;
 
-     // Extract signature from headers
-     const nowPaymentsSig = req.headers["x-nowpayments-sig"] as string;
+    // Extract signature from headers
+    const nowPaymentsSig = req.headers["x-nowpayments-sig"] as string;
 
-      if (!nowPaymentsSig) {
-        return res.status(400).json({ success: false, message: "Missing signature" });
-      }
-  
-      // Generate the HMAC signature
-      const sortedParams = JSON.stringify(req.body, Object.keys(req.body).sort());
-      const generatedSignature = crypto
-        .createHmac("sha512", IPN_SECRET)
-        .update(sortedParams)
-        .digest("hex");
-  
-      // Compare the signatures
-      if (generatedSignature !== nowPaymentsSig) {
-        return res.status(403).json({ success: false, message: "Invalid signature" });
-      }
+    if (!nowPaymentsSig) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing signature" });
+    }
+
+    // Generate the HMAC signature
+    const sortedParams = JSON.stringify(req.body, Object.keys(req.body).sort());
+    const generatedSignature = crypto
+      .createHmac("sha512", IPN_SECRET)
+      .update(sortedParams)
+      .digest("hex");
+
+    // Compare the signatures
+    if (generatedSignature !== nowPaymentsSig) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Invalid signature" });
+    }
 
     const { payment_id, payment_status, order_id } = req.body;
 

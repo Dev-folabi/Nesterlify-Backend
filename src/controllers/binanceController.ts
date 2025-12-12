@@ -5,11 +5,16 @@ import dotenv from "dotenv";
 import { BinanceOrderPayload, PaymentStatusRequest } from "../types/binance";
 import { OrderRequest } from "../types/requests";
 import Booking from "../models/booking.model";
-import { bookFlight, processFlightBooking } from "./flightsController";
-
+import {
+  bookFlight,
+  processFlightBooking,
+  bookCarTransfer,
+  processingCarBooking,
+  bookHotel,
+  processingHotelBooking,
+} from "../function/bookings";
+import { generateOrderId } from "../function";
 import { customRequest } from "../types/requests";
-import { bookCarTransfer, processingCarBooking } from "./carsController";
-import { bookHotel, processingHotelBooking } from "./hotelsController";
 import { sendMail } from "../utils/sendMail";
 import User from "../models/user.model";
 import Notification from "../models/notification.model";
@@ -115,8 +120,8 @@ export const createOrder = async (
         .json({ success: false, message: "Unauthorized, pls login" });
     const paymentMethod = "Binance Pay";
 
-    const cryptId = crypto.randomBytes(4).toString("hex");
-    const orderId = `ORD-${cryptId}`;
+    const orderId = generateOrderId();
+    // const cryptId = orderId.replace("ORD-", "");
 
     // Booking Logics
     switch (bookingType) {
@@ -168,7 +173,7 @@ export const createOrder = async (
 
     const payload: BinanceOrderPayload = {
       env: { terminalType: "WEB" },
-      merchantTradeNo: cryptId,
+      merchantTradeNo: orderId,
       orderAmount: parseFloat(amount.toFixed(2)),
       currency: "USDT",
       goods: {

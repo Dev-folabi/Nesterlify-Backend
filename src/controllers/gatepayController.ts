@@ -5,10 +5,16 @@ import dotenv from "dotenv";
 import { GatePayOrderPayload, PaymentStatusRequest } from "../types/gatepay";
 import { OrderRequest } from "../types/requests";
 import Booking from "../models/booking.model";
-import { bookFlight, processFlightBooking } from "./flightsController";
+import {
+  bookCarTransfer,
+  bookFlight,
+  processFlightBooking,
+  processingCarBooking,
+  bookHotel,
+  processingHotelBooking,
+} from "../function/bookings";
+import { generateOrderId } from "../function";
 import { customRequest } from "../types/requests";
-import { bookCarTransfer, processingCarBooking } from "./carsController";
-import { bookHotel, processingHotelBooking } from "./hotelsController";
 import { sendMail } from "../utils/sendMail";
 import User from "../models/user.model";
 import Notification from "../models/notification.model";
@@ -125,7 +131,7 @@ export const createGatePayOrder = async (
         .json({ success: false, message: "Unauthorized, pls login" });
     const paymentMethod = "Gate Pay";
 
-    const orderId = `ORD-${crypto.randomBytes(4).toString("hex")}`;
+    const orderId = generateOrderId();
 
     // Booking Logics
     switch (bookingType) {

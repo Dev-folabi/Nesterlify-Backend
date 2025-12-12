@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { omit } from "lodash";
 import User from "../models/user.model";
 import { Activation, PasswordReset } from "../models/temporaryData";
@@ -16,7 +15,8 @@ export const signup = async (
   next: NextFunction
 ) => {
   try {
-    const { username, firstName, lastName, email, password, confirmPassword } = req.body;
+    const { username, firstName, lastName, email, password, confirmPassword } =
+      req.body;
 
     if (password !== confirmPassword) {
       return errorHandler(res, 400, "Passwords do not match.");
@@ -98,7 +98,7 @@ export const activate = async (
     );
     await Activation.deleteOne({ activationCode });
 
-    const token = generateToken(newUser)
+    const token = generateToken(newUser);
 
     await sendMail({
       email: newUser.email,
@@ -191,7 +191,7 @@ export const signin = async (
     }
 
     // Generate JWT token
-    const token = generateToken(user)
+    const token = generateToken(user);
 
     res.status(200).json({
       success: true,

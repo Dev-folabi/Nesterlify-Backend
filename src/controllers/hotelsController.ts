@@ -2,8 +2,8 @@ import { Duffel } from "@duffel/api";
 import axios from "axios";
 import { NextFunction, Request, Response } from "express";
 import { errorHandler } from "../middleware/errorHandler";
-import Booking from "../models/booking.model";
 import { paginateResults } from "../function";
+import { MARKUP_PERCENT } from "../constant";
 
 const { DUFFEL_TOKEN, NOMINATIM_BASE_URL } = process.env;
 
@@ -132,8 +132,8 @@ export const findHotels = async (
     let hotels = result.data.results.map((hotel: any) => ({
       ...hotel,
       cheapest_rate_total_amount: (
-        parseFloat(hotel.cheapest_rate_total_amount) * 1.5
-      ).toFixed(2), // Apply 50% markup
+        parseFloat(hotel.cheapest_rate_total_amount) * MARKUP_PERCENT
+      ).toFixed(2),
     }));
 
     // Apply Min/Max Price filter
@@ -226,13 +226,13 @@ export const fetchRoomRates = async (
     // Fetch all room rates for the given hotel ID from Duffel
     const rates = await duffel.stays.searchResults.fetchAllRates(id);
 
-    // Apply 40% markup while handling potential missing or invalid values
+    // Apply 5% markup while handling potential missing or invalid values
     const updatedRates = {
       ...rates,
       data: {
         ...rates.data,
         cheapest_rate_total_amount: rates.data.cheapest_rate_total_amount
-          ? (parseFloat(rates.data.cheapest_rate_total_amount) * 1.4).toFixed(2)
+          ? (parseFloat(rates.data.cheapest_rate_total_amount) * MARKUP_PERCENT).toFixed(2)
           : rates.data.cheapest_rate_total_amount, // Preserve original if invalid
         accommodation: {
           ...rates.data.accommodation,
@@ -241,8 +241,8 @@ export const fetchRoomRates = async (
             rates: room.rates.map((rate: any) => ({
               ...rate,
               total_amount: rate.total_amount
-                ? (parseFloat(rate.total_amount) * 1.5).toFixed(2)
-                : rate.total_amount, // Preserve original if invalid
+                ? (parseFloat(rate.total_amount) * MARKUP_PERCENT).toFixed(2)
+                : rate.total_amount,
             })),
           })),
         },
@@ -251,7 +251,7 @@ export const fetchRoomRates = async (
 
     res.status(200).json({
       success: true,
-      message: "Hotel rate fetch successful with markup",
+      message: "Hotel rate fetch successful",
       data: paginateResults(
         [updatedRates.data],
         parseInt(req.query?.page as string, 10),
@@ -282,14 +282,14 @@ export const quoteBooking = async (
   try {
     const quote = await duffel.stays.quotes.create(rate_id);
 
-    // Apply 40% markup to the total_amount
+    // Apply 5% markup to the total_amount
     const updatedQuote = {
       ...quote,
       data: {
         ...quote.data,
         total_amount: quote.data.total_amount
-          ? (parseFloat(quote.data.total_amount) * 1.4).toFixed(2)
-          : quote.data.total_amount, // Preserve original if invalid
+          ? (parseFloat(quote.data.total_amount) * MARKUP_PERCENT).toFixed(2)
+          : quote.data.total_amount,
       },
     };
 
@@ -305,104 +305,5 @@ export const quoteBooking = async (
   } catch (error: any) {
     console.error(error);
     next(error)
-  }
-};
-
-export const processingHotelBooking = async (
-  userId: string,
-  orderId: string,
-  amount: number,
-  currency: string,
-  paymentMethod: string,
-  quote_id: string,
-  guests: { given_name: string; family_name: string }[],
-  email: string,
-  phone_number: string,
-  stay_special_requests?: string
-) => {
-  if (!Array.isArray(guests) || guests.length === 0) {
-    throw new Error("Invalid guest data");
-  }
-
-  if (!guests.every((guest) => guest.given_name && guest.family_name)) {
-    throw new Error("Guest details are required");
-  }
-
-  // Create and save booking
-  const bookingData = new Booking({
-    userId,
-    bookingType: "hotel",
-    hotel: [
-      {
-        quote_id,
-        guests,
-        email,
-        stay_special_requests,
-        phone_number,
-      },
-    ],
-    paymentDetails: {
-      transactionId: orderId,
-      paymentStatus: "pending",
-      paymentMethod,
-      amount: amount.toString(),
-      currency,
-    },
-    bookingStatus: "pending",
-  });
-
-  await bookingData.save();
-};
-
-// Book a hotel
-export const bookHotel = async (offerId: string) => {
-  try {
-    const booking = await Booking.findOne({
-      "paymentDetails.transactionId": offerId,
-    });
-    if (!booking) {
-      throw new Error("Booking not found");
-    }
-
-    const bookingResponse = await duffel.stays.bookings.create({
-      quote_id: booking.hotel[0].quote_id,
-      phone_number: booking.hotel[0].phone_number,
-      guests: booking.hotel[0].guests,
-      email: booking.hotel[0].email,
-      accommodation_special_requests: booking.hotel[0].stay_special_requests,
-    });
-
-    const bookingData = bookingResponse.data;
-
-    booking.hotel[0].check_in_date = bookingData.check_in_date;
-    booking.hotel[0].check_out_date = bookingData.check_out_date;
-    booking.hotel[0].rooms = bookingData.rooms;
-    booking.hotel[0].check_in_information = {
-      check_out_before_time:
-        bookingData.accommodation.check_in_information?.check_out_before_time ||
-        "",
-      check_in_before_time:
-        bookingData.accommodation.check_in_information?.check_out_before_time ||
-        "",
-      check_in_after_time:
-        bookingData.accommodation.check_in_information?.check_in_after_time ||
-        "",
-    };
-    booking.hotel[0].booking_id = bookingData.id;
-    booking.bookingStatus = bookingData.status;
-
-    await booking.save();
-
-    return {
-      success: true,
-      message: "Hotel booking successful",
-      data: bookingData,
-    };
-  } catch (error: any) {
-    console.error("Booking error:", error);
-    throw new Error(
-      "Booking failed: " +
-        (error.response ? error.response.result : error.message)
-    );
   }
 };
