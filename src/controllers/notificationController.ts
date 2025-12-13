@@ -3,6 +3,7 @@ import Notification from "../models/notification.model";
 import { errorHandler } from "../middleware/errorHandler";
 import { customRequest } from "../types/requests";
 import { paginateResults } from "../function";
+import logger from "../utils/logger";
 
 // Get all notifications for a user
 export const getNotifications = async (
@@ -62,7 +63,7 @@ export const getNotifications = async (
       ),
     });
   } catch (error) {
-    console.log({ message: "Error retrieving notification", error });
+    logger.error({ message: "Error retrieving notification", error });
     next(error);
   }
 };
@@ -100,7 +101,7 @@ export const markAsRead = async (
       }
     }
   } catch (error) {
-    console.log({ message: "Error marking notification as read", error });
+    logger.error({ message: "Error marking notification as read", error });
     next(error);
   }
 };
@@ -118,7 +119,7 @@ export const deleteNotification = async (
       .status(204)
       .json({ success: true, message: "Notification deleted successfully" });
   } catch (error) {
-    console.log({ message: "Error deleting notification", error });
+    logger.error({ message: "Error deleting notification", error });
     next(error);
   }
 };

@@ -5,6 +5,7 @@ import { errorHandler } from "../middleware/errorHandler";
 import dotenv from "dotenv";
 import { paginateResults } from "../function";
 import { MARKUP_PERCENT } from "../constant";
+import logger from "../utils/logger";
 
 dotenv.config();
 
@@ -22,7 +23,7 @@ const getGeoCode = async (
     }
     return null;
   } catch (error) {
-    console.error("Error fetching geocode:", error);
+    logger.error("Error fetching geocode:", error);
     return null;
   }
 };
@@ -72,7 +73,7 @@ export const getMatchingAirports = async (req: Request, res: Response) => {
       ),
     });
   } catch (error: any) {
-    console.error("Error fetching airport details:", error.message);
+    logger.error("Error fetching airport details:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -192,7 +193,7 @@ export const findCars = async (
       ),
     });
   } catch (error: any) {
-    console.error("Car transfer error:", error);
+    logger.error("Car transfer error:", error);
     next(error);
   }
 };

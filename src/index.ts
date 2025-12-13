@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import api from "./routes/api";
 import connectDB from "./database/db";
 import { blockBots, rateLimiter } from "./middleware/verify";
+import requestLogger from "./middleware/requestLogger";
+import { startCronJobs } from "./jobs/cron";
 
 // Dotenv config
 dotenv.config();
@@ -46,6 +48,7 @@ app.use(rateLimiter);
 
 app.use(express.json());
 app.use(morgan("combined"));
+app.use(requestLogger);
 
 // Routes
 app.get("/", (req: Request, res: Response) => {
@@ -71,6 +74,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 // Database Connection
 connectDB()
   .then(() => {
+    startCronJobs();
     app.listen(port, () => {
       console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
     });

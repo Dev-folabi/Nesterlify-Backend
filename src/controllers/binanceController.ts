@@ -18,6 +18,7 @@ import { customRequest } from "../types/requests";
 import { sendMail } from "../utils/sendMail";
 import User from "../models/user.model";
 import Notification from "../models/notification.model";
+import logger from "../utils/logger";
 dotenv.config();
 
 // Environment Variables
@@ -163,7 +164,7 @@ export const createOrder = async (
         );
         break;
       case "vacation":
-        console.log("Processing vacation booking...");
+        logger.info("Processing vacation booking...");
         break;
       default:
         return res
@@ -243,8 +244,22 @@ export const createOrder = async (
           : "Binance Pay request failed",
       data: response.data,
     });
-  } catch (error) {
-    console.log(error);
+  } catch (error: any) {
+    if (error.response) {
+      logger.error(
+        "Binance API Error Response:",
+        JSON.stringify(
+          {
+            status: error.response.status,
+            data: error.response.data,
+          },
+          null,
+          2
+        )
+      );
+    } else {
+      logger.error("Binance API Error:", error.message);
+    }
     next(error);
   }
 };
@@ -267,7 +282,7 @@ export const binanceWebhook = async (
       .digest("hex");
 
     if (binanceSignature !== expectedSignature) {
-      console.error(" Invalid Binance webhook signature");
+      logger.error(" Invalid Binance webhook signature");
       return res
         .status(400)
         .json({ success: false, message: "Invalid signature" });
@@ -275,7 +290,7 @@ export const binanceWebhook = async (
 
     // Check if request body contains expected data
     if (!req.body || !req.body.data) {
-      console.error(" Invalid webhook payload:", req.body);
+      logger.error(`Invalid webhook payload: ${JSON.stringify(req.body)}`);
       return res
         .status(400)
         .json({ success: false, message: "Invalid payload" });
@@ -290,13 +305,13 @@ export const binanceWebhook = async (
     });
 
     if (!booking) {
-      console.error(` Booking not found for transaction ID: ${orderId}`);
+      logger.error(` Booking not found for transaction ID: ${orderId}`);
       return res
         .status(404)
         .json({ success: false, message: "Booking not found" });
     }
 
-    console.log(
+    logger.info(
       ` Webhook received for booking ID: ${orderId} - Status: ${bizStatus}`
     );
 
@@ -318,7 +333,7 @@ export const binanceWebhook = async (
           await bookCarTransfer(orderId);
           break;
         case "vacation":
-          console.log("Processing vacation booking...");
+          logger.info("Processing vacation booking...");
           break;
         default:
           return res
@@ -329,11 +344,11 @@ export const binanceWebhook = async (
       booking.bookingStatus = "confirmed";
       booking.paymentDetails.paymentStatus = "completed";
     } else if (bizStatus === "PAY_PROCESSING") {
-      console.log(" Payment is still processing...");
+      logger.info(" Payment is still processing...");
       booking.bookingStatus = "pending";
       booking.paymentDetails.paymentStatus = "processing";
     } else {
-      console.log(" Payment failed or expired...");
+      logger.info(" Payment failed or expired...");
       booking.bookingStatus = "failed";
       booking.paymentDetails.paymentStatus = "failed";
     }
@@ -369,7 +384,7 @@ export const binanceWebhook = async (
 
     return res.status(200).json({ returnCode: "SUCCESS" });
   } catch (error) {
-    console.error("Webhook processing error:", error);
+    logger.error("Webhook processing error:", error);
     next(error);
   }
 };

@@ -18,6 +18,7 @@ import { customRequest } from "../types/requests";
 import { sendMail } from "../utils/sendMail";
 import User from "../models/user.model";
 import Notification from "../models/notification.model";
+import logger from "../utils/logger";
 dotenv.config();
 
 // Environment Variables
@@ -42,26 +43,7 @@ if (
   throw new Error("Missing required GatePay API environment variables");
 }
 
-// Generate Nonce (Random String)
-const generateNonce = (length: number = 16): string => {
-  return crypto.randomBytes(length).toString("hex").slice(0, length);
-};
-
-// Generate Signature
-const generateSignature = (
-  timestamp: string,
-  nonce: string,
-  body: string
-): string => {
-  if (!GATEPAY_API_KEY) {
-    throw new Error("GATEPAY_SECRET_KEY is missing");
-  }
-  const payload = `${timestamp}\n${nonce}\n${body}\n`;
-  return crypto
-    .createHmac("sha512", `${GATEPAY_API_KEY}=`)
-    .update(payload)
-    .digest("hex");
-};
+import { generateNonce, generateSignature } from "../service/gatepayService";
 
 // Create Order with Booking Entry
 export const createGatePayOrder = async (
@@ -258,13 +240,13 @@ export const createGatePayOrder = async (
       data: response.data,
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     next(error);
   }
 };
 
 const verifyGatePaySignature = (req: Request) => {
-  const gatePaySecret = process.env.GATEPAY_WEBHOOK_SECRET!;
+  const gatePaySecret = process.env.GATEPAY_API_KEY!;
   const receivedSignature = req.headers["x-gatepay-signature"];
 
   const computedSignature = crypto
@@ -282,7 +264,7 @@ export const gatePayWebhook = async (
   next: NextFunction
 ) => {
   try {
-    console.log("GatePay Webhook Notification:", req.body);
+    logger.info(`GatePay Webhook Notification: ${JSON.stringify(req.body)}`);
 
     // Verify Signature
     if (!verifyGatePaySignature(req)) {
@@ -292,7 +274,7 @@ export const gatePayWebhook = async (
     }
 
     const { bizStatus, data } = req.body;
-
+    console.log("GatePay Webhook Notification:", req.body);
     // Ensure `data` Exists
     if (!data || !data.merchantTradeNo) {
       return res
@@ -331,7 +313,7 @@ export const gatePayWebhook = async (
           await bookCarTransfer(orderId);
           break;
         case "vacation":
-          await console.log("Processing vacation booking...");
+          await logger.info("Processing vacation booking...");
           break;
         default:
           return res
@@ -421,7 +403,7 @@ export const checkGatePayStatus = async (
       data: response.data,
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     next(error);
   }
 };

@@ -7,6 +7,7 @@ import {
 } from "../types/requests";
 import { paginateResults } from "../function";
 import { MARKUP_PERCENT } from "../constant";
+import logger from "../utils/logger";
 
 // Travel class mapping
 const travelClassMap: Record<string, string> = {
@@ -193,7 +194,7 @@ export const searchFlights = async (
       ),
     });
   } catch (error: any) {
-    console.error("Flight search error:", error);
+    logger.error("Flight search error:", error);
     next(error);
   }
 };
@@ -271,7 +272,7 @@ export const searchMultiCityFlights = async (
         if (airlines) params.includedAirlineCodes = airlines;
 
         const response = await amadeus.shopping.flightOffersSearch.get(params);
-        console.log(response.data);
+        logger.debug(JSON.stringify(response.data));
         if (!response.data || !Array.isArray(response.data)) {
           return errorHandler(res, 500, "Unexpected API response format.");
         }
@@ -341,7 +342,7 @@ export const searchMultiCityFlights = async (
       ),
     });
   } catch (error: any) {
-    console.error("Multi-city flight search error:", error);
+    logger.error("Multi-city flight search error:", error);
     next(error);
   }
 };
@@ -408,7 +409,7 @@ export const confirmFlightPricing = async (
       ),
     });
   } catch (error: any) {
-    console.error("Flight pricing error:", error);
+    logger.error("Flight pricing error:", error);
     next(error);
   }
 };
@@ -446,7 +447,7 @@ export const trackFlight = async (
       data: response.data,
     });
   } catch (error: any) {
-    console.error("Flight tracking error:", error);
+    logger.error("Flight tracking error:", error);
     next(error);
   }
 };

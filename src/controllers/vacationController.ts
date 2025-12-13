@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { amadeus } from "../utils/amadeus";
 import { errorHandler } from "../middleware/errorHandler";
+import logger from "../utils/logger";
 import axios from "axios";
 import dotenv from "dotenv";
 import { paginateResults } from "../function";
@@ -158,7 +159,7 @@ export const bookVacation = async (
       ),
     });
   } catch (error: any) {
-    console.log(error);
+    logger.error(error);
     return errorHandler(
       res,
       error.response?.status || 500,

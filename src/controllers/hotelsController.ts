@@ -4,6 +4,7 @@ import { NextFunction, Request, Response } from "express";
 import { errorHandler } from "../middleware/errorHandler";
 import { paginateResults } from "../function";
 import { MARKUP_PERCENT } from "../constant";
+import logger from "../utils/logger";
 
 const { DUFFEL_TOKEN, NOMINATIM_BASE_URL } = process.env;
 
@@ -101,7 +102,11 @@ export const findHotels = async (
 
   for (const guest of guests) {
     if (guest.type === "child" && (!("age" in guest) || guest.age >= 18)) {
-      return errorHandler(res, 400, "Age must be provided and less than 18 for child guests");
+      return errorHandler(
+        res,
+        400,
+        "Age must be provided and less than 18 for child guests"
+      );
     }
   }
 
@@ -232,7 +237,9 @@ export const fetchRoomRates = async (
       data: {
         ...rates.data,
         cheapest_rate_total_amount: rates.data.cheapest_rate_total_amount
-          ? (parseFloat(rates.data.cheapest_rate_total_amount) * MARKUP_PERCENT).toFixed(2)
+          ? (
+              parseFloat(rates.data.cheapest_rate_total_amount) * MARKUP_PERCENT
+            ).toFixed(2)
           : rates.data.cheapest_rate_total_amount, // Preserve original if invalid
         accommodation: {
           ...rates.data.accommodation,
@@ -303,7 +310,7 @@ export const quoteBooking = async (
       ),
     });
   } catch (error: any) {
-    console.error(error);
-    next(error)
+    logger.error(error);
+    next(error);
   }
 };

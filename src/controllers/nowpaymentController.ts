@@ -17,6 +17,7 @@ import { sendMail } from "../utils/sendMail";
 import User from "../models/user.model";
 import Notification from "../models/notification.model";
 import dotenv from "dotenv";
+import logger from "../utils/logger";
 
 dotenv.config();
 
@@ -52,7 +53,7 @@ export const getNowPaymentCurrencies = async (
       data: result,
     });
   } catch (error: any) {
-    console.log(error);
+    logger.error(error);
     next(error);
   }
 };
@@ -169,7 +170,7 @@ export const createOrder = async (
         );
         break;
       case "vacation":
-        console.log("Processing vacation booking...");
+        logger.info("Processing vacation booking...");
         break;
       default:
         return res
@@ -232,7 +233,7 @@ export const createOrder = async (
       data: response,
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     next(error);
   }
 };
@@ -244,7 +245,9 @@ export const nowPaymentWebhook = async (
   next: NextFunction
 ) => {
   try {
-    console.log("NOWPayments Webhook Notification:", req.body);
+    logger.info(
+      `NOWPayments Webhook Notification: ${JSON.stringify(req.body)}`
+    );
 
     const IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET!;
 
@@ -257,14 +260,30 @@ export const nowPaymentWebhook = async (
         .json({ success: false, message: "Missing signature" });
     }
 
-    // Generate the HMAC signature
-    const sortedParams = JSON.stringify(req.body, Object.keys(req.body).sort());
+    // Helper function to recursively sort JSON keys
+    const sortObject = (obj: any): any => {
+      if (obj === null || typeof obj !== "object") {
+        return obj;
+      }
+      if (Array.isArray(obj)) {
+        return obj.map(sortObject);
+      }
+      return Object.keys(obj)
+        .sort()
+        .reduce((result: any, key: string) => {
+          result[key] = sortObject(obj[key]);
+          return result;
+        }, {});
+    };
+
+    // Generate the HMAC signature with properly sorted JSON
+    const sortedBody = sortObject(req.body);
+    const sortedParams = JSON.stringify(sortedBody);
     const generatedSignature = crypto
       .createHmac("sha512", IPN_SECRET)
       .update(sortedParams)
       .digest("hex");
 
-    // Compare the signatures
     if (generatedSignature !== nowPaymentsSig) {
       return res
         .status(403)
@@ -328,7 +347,7 @@ export const nowPaymentWebhook = async (
               await bookCarTransfer(order_id);
               break;
             case "vacation":
-              console.log("Processing vacation booking...");
+              logger.info("Processing vacation booking...");
               break;
             default:
               return res
@@ -336,7 +355,7 @@ export const nowPaymentWebhook = async (
                 .json({ success: false, message: "Invalid booking type" });
           }
         } catch (err) {
-          console.error("Booking processing error:", err);
+          logger.error("Booking processing error:", err);
           return res
             .status(500)
             .json({ success: false, message: "Booking processing failed" });
@@ -386,7 +405,7 @@ export const nowPaymentWebhook = async (
 
     return res.status(200).json({ returnCode: "SUCCESS" });
   } catch (error) {
-    console.error("NOWPayments Webhook Error:", error);
+    logger.error("NOWPayments Webhook Error:", error);
     next(error);
   }
 };
@@ -416,7 +435,7 @@ export const getPaymentStatus = async (
       data: paymentStatus,
     });
   } catch (error) {
-    console.error("Error fetching payment status:", error);
+    logger.error("Error fetching payment status:", error);
     next(error);
   }
 };

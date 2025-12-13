@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import Booking from "../models/booking.model";
 import { customRequest } from "../types/requests";
 import { paginateResults } from "../function";
+import logger from "../utils/logger";
 
 // Get all bookings for a particular user with filters
 export const getUserBookings = async (
@@ -25,7 +26,7 @@ export const getUserBookings = async (
     }
 
     const bookings = await Booking.find(query).sort({ createdAt: -1 });
-    
+
     res.status(200).json({
       success: true,
       message: "Bookings retrieved successfully",
@@ -36,7 +37,7 @@ export const getUserBookings = async (
       ),
     });
   } catch (error) {
-    console.log({ message: "Error fetching bookings", error });
+    logger.error({ message: "Error fetching bookings", error });
     next(error);
   }
 };
@@ -61,7 +62,7 @@ export const getBookingById = async (
       data: booking,
     });
   } catch (error) {
-    console.log({ message: "Error fetching booking", error });
+    logger.error({ message: "Error fetching booking", error });
     next(error);
   }
 };
