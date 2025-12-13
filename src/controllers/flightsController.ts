@@ -207,6 +207,15 @@ export const searchMultiCityFlights = async (
 ) => {
   try {
     const { trips } = req.body;
+
+    if (!Array.isArray(trips) || trips.length < 2) {
+      return errorHandler(
+        res,
+        400,
+        "Multi-city flights require at least two trip legs."
+      );
+    }
+
     const {
       adults,
       children,
@@ -216,24 +225,19 @@ export const searchMultiCityFlights = async (
       sortBy,
       stops,
       airlines,
+      page = "1",
+      limit = "10",
     } = req.query;
 
-    if (!trips || trips.length < 2) {
-      return errorHandler(
-        res,
-        400,
-        "Multi-city flights require at least two trip legs."
-      );
+    const parsedAdults = Number(adults);
+    const parsedChildren = children ? Number(children) : 0;
+
+    if (!Number.isInteger(parsedAdults) || parsedAdults < 1) {
+      return errorHandler(res, 400, "Invalid number of adults.");
     }
 
-    const today = new Date().toISOString().split("T")[0];
-    for (const trip of trips) {
-      const parsedDepartureDate = new Date(trip.departureDate)
-        .toISOString()
-        .split("T")[0];
-      if (parsedDepartureDate < today) {
-        return errorHandler(res, 400, "Departure date cannot be in the past.");
-      }
+    if (parsedChildren < 0) {
+      return errorHandler(res, 400, "Invalid number of children.");
     }
 
     const cabinClass = getCabinClass(travelClass as string);
@@ -241,108 +245,137 @@ export const searchMultiCityFlights = async (
       return errorHandler(res, 400, "Invalid travel class.");
     }
 
-    const parsedAdults = parseInt(adults as string, 10);
-    const parsedChildren = children ? parseInt(children as string, 10) : 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    if (isNaN(parsedAdults) || parsedAdults < 1) {
-      return errorHandler(res, 400, "Invalid number of adults.");
+    // Validate trip legs before hitting external APIs
+    for (const trip of trips) {
+      if (!trip.from || !trip.to || !trip.departureDate) {
+        return errorHandler(
+          res,
+          400,
+          "Each trip leg must include from, to, and departureDate."
+        );
+      }
+
+      const departure = new Date(trip.departureDate);
+      if (isNaN(departure.getTime())) {
+        return errorHandler(res, 400, "Invalid departure date format.");
+      }
+
+      if (departure < today) {
+        return errorHandler(res, 400, "Departure date cannot be in the past.");
+      }
     }
 
     const results = await Promise.all(
       trips.map(async (trip) => {
-        const { from, to, departureDate } = trip;
+        try {
+          const params: any = {
+            originLocationCode: trip.from,
+            destinationLocationCode: trip.to,
+            departureDate: trip.departureDate,
+            adults: parsedAdults,
+            travelClass: cabinClass,
+            currencyCode: "USD",
+          };
 
-        if (!from || !to || !departureDate) {
-          throw new Error(
-            "Each trip leg must include from, to, and departureDate."
-          );
-        }
+          if (parsedChildren > 0) params.children = parsedChildren;
+          if (stops === "direct") params.nonStop = true;
+          if (airlines) params.includedAirlineCodes = airlines;
 
-        const params: any = {
-          originLocationCode: from,
-          destinationLocationCode: to,
-          departureDate,
-          adults: parsedAdults,
-          travelClass: cabinClass,
-          currencyCode: "USD",
-        };
+          const response =
+            await amadeus.shopping.flightOffersSearch.get(params);
 
-        if (parsedChildren) params.children = parsedChildren;
-        if (stops === "direct") params.nonStop = true;
-        if (airlines) params.includedAirlineCodes = airlines;
-
-        const response = await amadeus.shopping.flightOffersSearch.get(params);
-        logger.debug(JSON.stringify(response.data));
-        if (!response.data || !Array.isArray(response.data)) {
-          return errorHandler(res, 500, "Unexpected API response format.");
-        }
-
-        const flightsWithMarkup = applyMarkupToFlights(response.data);
-
-        // Filter flights by Min and Max Price
-        const filteredByPrice = flightsWithMarkup.filter((flight: any) => {
-          const flightPrice = parseFloat(flight.price.total);
-          return (
-            (!minPrice || flightPrice >= parseFloat(minPrice as string)) &&
-            (!maxPrice || flightPrice <= parseFloat(maxPrice as string))
-          );
-        });
-
-        // Filter flights by Stops
-        const filteredByStops = stops
-          ? filteredByPrice.filter((flight: any) => {
-              const numberOfStops = flight.itineraries[0].segments.length - 1;
-              return (
-                stops === "any" || numberOfStops === parseInt(stops as string)
-              );
-            })
-          : filteredByPrice;
-
-        // Sorting Logic
-        if (sortBy) {
-          if (
-            ["low-to-high", "cheapest-price", "best-price"].includes(
-              sortBy as string
-            )
-          ) {
-            filteredByStops.sort(
-              (a: any, b: any) =>
-                parseFloat(a.price.total) - parseFloat(b.price.total)
-            );
-          } else if (sortBy === "high-to-low") {
-            filteredByStops.sort(
-              (a: any, b: any) =>
-                parseFloat(b.price.total) - parseFloat(a.price.total)
-            );
-          } else if (sortBy === "quickest") {
-            filteredByStops.sort(
-              (a: any, b: any) =>
-                getDurationInMinutes(a.duration) -
-                getDurationInMinutes(b.duration)
-            );
+          if (!Array.isArray(response?.data)) {
+            return {
+              ...trip,
+              flights: [],
+              error: "No flights returned.",
+            };
           }
-        }
 
-        return {
-          from,
-          to,
-          departureDate,
-          flights: filteredByStops,
-        };
+          let flights = applyMarkupToFlights(response.data);
+
+          // Price filter
+          if (minPrice || maxPrice) {
+            const min = minPrice ? Number(minPrice) : 0;
+            const max = maxPrice ? Number(maxPrice) : Infinity;
+
+            flights = flights.filter((flight: any) => {
+              const price = Number(flight.price?.total);
+              return price >= min && price <= max;
+            });
+          }
+
+          // Stops filter
+          if (stops && stops !== "any") {
+            const stopCount = Number(stops);
+            flights = flights.filter((flight: any) => {
+              const segments = flight.itineraries?.[0]?.segments?.length ?? 0;
+              return segments - 1 === stopCount;
+            });
+          }
+
+          // Sorting
+          if (sortBy) {
+            if (
+              ["low-to-high", "cheapest-price", "best-price"].includes(
+                sortBy as string
+              )
+            ) {
+              flights.sort(
+                (a: any, b: any) =>
+                  Number(a.price.total) - Number(b.price.total)
+              );
+            }
+
+            if (sortBy === "high-to-low") {
+              flights.sort(
+                (a: any, b: any) =>
+                  Number(b.price.total) - Number(a.price.total)
+              );
+            }
+
+            if (sortBy === "quickest") {
+              flights.sort(
+                (a: any, b: any) =>
+                  getDurationInMinutes(a.itineraries[0].duration) -
+                  getDurationInMinutes(b.itineraries[0].duration)
+              );
+            }
+          }
+
+          return {
+            ...trip,
+            flights,
+          };
+        } catch (err: any) {
+          logger.error("Trip leg search failed", {
+            trip,
+            message: err.message,
+            response: err?.response?.data,
+          });
+
+          return {
+            ...trip,
+            flights: [],
+            error: err?.message || "Flight search failed for this leg.",
+          };
+        }
       })
     );
 
     res.status(200).json({
       success: true,
-      message: "Multi-city search completed successfully with markup applied.",
-      data: paginateResults(
-        results,
-        parseInt(req.query?.page as string, 10),
-        parseInt(req.query?.limit as string, 10)
-      ),
+      message: "Multi-city flight search completed.",
+      data: paginateResults(results, Number(page), Number(limit)),
     });
   } catch (error: any) {
-    logger.error("Multi-city flight search error:", error);
+    logger.error("Multi-city flight search fatal error", {
+      message: error.message,
+      stack: error.stack,
+    });
     next(error);
   }
 };
