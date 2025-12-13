@@ -93,93 +93,155 @@ export const searchFlights = async (
       adults,
       children,
       travelClass,
-      tripType,
+      tripType = "one-way",
       minPrice,
       maxPrice,
       sortBy,
       stops,
       airlines,
+      page = "1",
+      limit = "10",
     } = req.query;
 
-    const today = new Date().toISOString().split("T")[0];
-    const parsedDepartureDate = new Date(departureDate as string)
-      .toISOString()
-      .split("T")[0];
-    const parsedReturnDate = returnDate
-      ? new Date(returnDate as string).toISOString().split("T")[0]
-      : null;
+    if (!from || !to || !departureDate) {
+      return errorHandler(
+        res,
+        400,
+        "from, to, and departureDate are required."
+      );
+    }
 
-    if (parsedDepartureDate < today)
+    const parsedAdults = Number(adults);
+    const parsedChildren = children ? Number(children) : 0;
+
+    if (!Number.isInteger(parsedAdults) || parsedAdults < 1) {
+      return errorHandler(res, 400, "Invalid number of adults.");
+    }
+
+    if (parsedChildren < 0) {
+      return errorHandler(res, 400, "Invalid number of children.");
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const depDate = new Date(departureDate as string);
+    if (isNaN(depDate.getTime())) {
+      return errorHandler(res, 400, "Invalid departure date format.");
+    }
+
+    if (depDate < today) {
       return errorHandler(res, 400, "Departure date cannot be in the past.");
-    if (parsedReturnDate && parsedReturnDate < today)
-      return errorHandler(res, 400, "Return date cannot be in the past.");
-    if (
-      tripType === "round-trip" &&
-      (!parsedReturnDate || parsedReturnDate < parsedDepartureDate)
-    ) {
-      return errorHandler(res, 400, "Invalid return date for round-trip.");
+    }
+
+    let retDate: Date | null = null;
+
+    if (tripType === "round-trip") {
+      if (!returnDate) {
+        return errorHandler(
+          res,
+          400,
+          "Return date is required for round-trip."
+        );
+      }
+
+      retDate = new Date(returnDate as string);
+      if (isNaN(retDate.getTime())) {
+        return errorHandler(res, 400, "Invalid return date format.");
+      }
+
+      if (retDate < depDate) {
+        return errorHandler(
+          res,
+          400,
+          "Return date must be after departure date."
+        );
+      }
     }
 
     const cabinClass = getCabinClass(travelClass as string);
-    if (!cabinClass) return errorHandler(res, 400, "Invalid travel class.");
+    if (!cabinClass) {
+      return errorHandler(res, 400, "Invalid travel class.");
+    }
 
     const params: any = {
       originLocationCode: from,
       destinationLocationCode: to,
       departureDate,
-      adults: parseInt(adults as string, 10),
+      adults: parsedAdults,
       travelClass: cabinClass,
       currencyCode: "USD",
     };
 
-    if (children) params.children = parseInt(children as string, 10);
+    if (parsedChildren > 0) params.children = parsedChildren;
     if (tripType === "round-trip") params.returnDate = returnDate;
+    if (stops === "direct") params.nonStop = true;
+    if (airlines) params.includedAirlineCodes = airlines;
 
-    const response = await amadeus.shopping.flightOffersSearch.get(params);
+    let response;
+    try {
+      response = await amadeus.shopping.flightOffersSearch.get(params);
+    } catch (err: any) {
+      logger.error("Amadeus flight search failed", {
+        message: err.message,
+        response: err?.response?.data,
+      });
 
-    if (!response.data || !Array.isArray(response.data)) {
-      return errorHandler(res, 500, "No flights found");
+      return errorHandler(res, 502, "Failed to fetch flights from provider.");
     }
 
-    const flightsWithMarkup = applyMarkupToFlights(response.data);
+    if (!Array.isArray(response?.data)) {
+      return res.status(200).json({
+        success: true,
+        message: "No flights found.",
+        data: [],
+      });
+    }
 
-    // Filter flights by Min and Max Price
-    const filteredByPrice = flightsWithMarkup.filter((flight: any) => {
-      const flightPrice = parseFloat(flight.price.total);
-      return (
-        (!minPrice || flightPrice >= parseFloat(minPrice as string)) &&
-        (!maxPrice || flightPrice <= parseFloat(maxPrice as string))
-      );
-    });
+    let flights = applyMarkupToFlights(response.data);
 
-    // Filter flights by Stops
-    const filteredByStops = stops
-      ? filteredByPrice.filter((flight: any) => {
-          const numberOfStops = flight.itineraries[0].segments.length - 1;
-          return stops === "any" || numberOfStops === parseInt(stops as string);
-        })
-      : filteredByPrice;
+    // Price filter
+    if (minPrice || maxPrice) {
+      const min = minPrice ? Number(minPrice) : 0;
+      const max = maxPrice ? Number(maxPrice) : Infinity;
 
-    // Sorting Logic
+      flights = flights.filter((flight: any) => {
+        const price = Number(flight.price?.total);
+        return price >= min && price <= max;
+      });
+    }
+
+    // Stops filter
+    if (stops && stops !== "any") {
+      const stopCount = Number(stops);
+      flights = flights.filter((flight: any) => {
+        const segments = flight.itineraries?.[0]?.segments?.length ?? 0;
+        return segments - 1 === stopCount;
+      });
+    }
+
     if (sortBy) {
       if (
         ["low-to-high", "cheapest-price", "best-price"].includes(
           sortBy as string
         )
       ) {
-        filteredByStops.sort(
-          (a: any, b: any) =>
-            parseFloat(a.price.total) - parseFloat(b.price.total)
+        flights.sort(
+          (a: any, b: any) => Number(a.price.total) - Number(b.price.total)
         );
-      } else if (sortBy === "high-to-low") {
-        filteredByStops.sort(
-          (a: any, b: any) =>
-            parseFloat(b.price.total) - parseFloat(a.price.total)
+      }
+
+      if (sortBy === "high-to-low") {
+        flights.sort(
+          (a: any, b: any) => Number(b.price.total) - Number(a.price.total)
         );
-      } else if (sortBy === "quickest") {
-        filteredByStops.sort(
+      }
+
+      if (sortBy === "quickest") {
+        flights.sort(
           (a: any, b: any) =>
-            getDurationInMinutes(a.duration) - getDurationInMinutes(b.duration)
+            getDurationInMinutes(a.itineraries[0].duration) -
+            getDurationInMinutes(b.itineraries[0].duration)
         );
       }
     }
@@ -187,14 +249,13 @@ export const searchFlights = async (
     res.status(200).json({
       success: true,
       message: "Flight search completed successfully.",
-      data: paginateResults(
-        filteredByStops,
-        parseInt(req.query?.page as string, 10),
-        parseInt(req.query?.limit as string, 10)
-      ),
+      data: paginateResults(flights, Number(page), Number(limit)),
     });
   } catch (error: any) {
-    logger.error("Flight search error:", error);
+    logger.error("Flight search fatal error", {
+      message: error.message,
+      stack: error.stack,
+    });
     next(error);
   }
 };

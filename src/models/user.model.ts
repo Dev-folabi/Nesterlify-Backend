@@ -31,12 +31,10 @@ const userSchema = new Schema<IUser>(
     gender: String,
     firstName: {
       type: String,
-      required: true,
       trim: true,
     },
     lastName: {
       type: String,
-      required: true,
       trim: true,
     },
     phoneNumber: {
