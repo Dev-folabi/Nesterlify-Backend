@@ -5,40 +5,14 @@ import { errorHandler } from "../middleware/errorHandler";
 import { paginateResults } from "../function";
 import { MARKUP_PERCENT } from "../constant";
 import logger from "../utils/logger";
+import { getGeocode } from "../utils/geocoding";
 
-const { DUFFEL_TOKEN, NOMINATIM_BASE_URL } = process.env;
+const { DUFFEL_TOKEN } = process.env;
 
 // Initialize Duffel API
 const duffel = new Duffel({
   token: DUFFEL_TOKEN!,
 });
-
-// Type for geocode response
-interface GeocodeResult {
-  latitude: number;
-  longitude: number;
-}
-
-// Function to get geolocation coordinates using Nominatim
-const getGeocode = async (location: string): Promise<GeocodeResult> => {
-  try {
-    const response = await axios.get(`${NOMINATIM_BASE_URL}/search`, {
-      params: { q: location, format: "json", addressdetails: 1 },
-    });
-    if (!response.data || response.data.length === 0) {
-      throw new Error("Location not found");
-    }
-
-    const result = response.data[0];
-    return {
-      latitude: parseFloat(result.lat),
-      longitude: parseFloat(result.lon),
-    };
-  } catch (error: any) {
-    throw new Error(`Failed to get geocode: ${error.message}`);
-  }
-};
-
 // Type for search request body
 interface SearchRequestBody {
   rooms: number;

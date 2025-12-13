@@ -2,14 +2,11 @@ import { Request, Response, NextFunction } from "express";
 import { amadeus } from "../utils/amadeus";
 import { errorHandler } from "../middleware/errorHandler";
 import logger from "../utils/logger";
-import axios from "axios";
+import { getGeocodeString } from "../utils/geocoding";
 import dotenv from "dotenv";
 import { paginateResults } from "../function";
 
 dotenv.config();
-
-// Environment Variables
-const { NOMINATIM_BASE_URL } = process.env;
 
 // Get Coordinates
 export const getCoordinates = async (
@@ -22,13 +19,10 @@ export const getCoordinates = async (
     return errorHandler(res, 400, "Location is required.");
   }
 
-  const url = `${NOMINATIM_BASE_URL}/search?q=${encodeURIComponent(location)}&format=json`;
-
   try {
-    const response = await axios.get(url);
-    if (response.data.length > 0) {
-      const { lat, lon } = response.data[0];
-      const data = { location, latitude: lat, longitude: lon };
+    const result = await getGeocodeString(location);
+    if (result) {
+      const data = { location, latitude: result.lat, longitude: result.lon };
       res.status(200).json({
         success: true,
         message: "Coordinates found",
@@ -61,14 +55,9 @@ export const getVacations = async (
     let coordinates: { latitude: string; longitude: string } | null = null;
 
     if (location) {
-      const url = `${NOMINATIM_BASE_URL}/search?q=${encodeURIComponent(
-        location as string
-      )}&format=json`;
-
-      const response = await axios.get(url);
-      if (response.data.length > 0) {
-        const { lat, lon } = response.data[0];
-        coordinates = { latitude: lat, longitude: lon };
+      const result = await getGeocodeString(location as string);
+      if (result) {
+        coordinates = { latitude: result.lat, longitude: result.lon };
       } else {
         return errorHandler(res, 404, `No coordinates found for: ${location}`);
       }

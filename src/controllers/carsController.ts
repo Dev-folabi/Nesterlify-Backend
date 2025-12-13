@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { amadeus } from "../utils/amadeus";
-import axios from "axios";
+import { getGeocodeString } from "../utils/geocoding";
 import { errorHandler } from "../middleware/errorHandler";
 import dotenv from "dotenv";
 import { paginateResults } from "../function";
@@ -8,25 +8,6 @@ import { MARKUP_PERCENT } from "../constant";
 import logger from "../utils/logger";
 
 dotenv.config();
-
-const { NOMINATIM_BASE_URL } = process.env;
-
-// Function to get latitude & longitude from Nominatim API
-const getGeoCode = async (
-  address: string
-): Promise<{ lat: string; lon: string } | null> => {
-  try {
-    const url = `${NOMINATIM_BASE_URL}/search?q=${encodeURIComponent(address)}&format=json`;
-    const response = await axios.get(url);
-    if (response.data.length > 0) {
-      return { lat: response.data[0].lat, lon: response.data[0].lon };
-    }
-    return null;
-  } catch (error) {
-    logger.error("Error fetching geocode:", error);
-    return null;
-  }
-};
 
 // Controller to get all matching airports & their geo-coordinates
 export const getMatchingAirports = async (req: Request, res: Response) => {
@@ -51,7 +32,7 @@ export const getMatchingAirports = async (req: Request, res: Response) => {
     const airportData = await Promise.all(
       response.data.map(async (airport: any) => {
         const address = `${airport.name}, ${airport.address.cityCode}`;
-        const geoCode = await getGeoCode(address);
+        const geoCode = await getGeocodeString(address);
 
         return {
           startLocationCode: airport.iataCode, // IATA code (e.g., CDG)
