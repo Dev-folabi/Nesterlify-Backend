@@ -85,7 +85,7 @@ export const rateLimiter = rateLimit({
   headers: true, // Send rate limit info in response headers
 });
 
-// Block Bots and Crawlers
+// Block Bots and Crawlers (excluding legitimate API clients)
 const blockedBots = [
   /googlebot/i, // Google crawler
   /bingbot/i, // Bing crawler
@@ -110,13 +110,8 @@ const blockedBots = [
   /slackbot/i, // Slack bot
   /applebot/i, // Apple search bot
   /sogou/i, // Sogou bot
-  /curl/i, // Curl requests
-  /wget/i, // Wget requests
-  /python-requests/i, // Python requests module
-  /java/i, // Java-based scrapers
-  /Go-http-client/i, // Go-based scrapers
-  /httpclient/i, // Generic HTTP clients
-  /node/i, // Node.js requests
+  // Note: Removed curl, wget, python-requests, java, Go-http-client, httpclient, node
+  // as these are commonly used by legitimate API clients and testing tools
 ];
 
 export const blockBots = (req: Request, res: Response, next: NextFunction) => {
