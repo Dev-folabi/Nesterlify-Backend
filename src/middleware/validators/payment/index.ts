@@ -91,7 +91,7 @@ export const validateCreateOrder = [
 
   body("startConnectedSegment")
     .if(body("bookingType").equals("car"))
-    .optional()
+    .notEmpty()
     .isObject()
     .withMessage("startConnectedSegment must be an object"),
 

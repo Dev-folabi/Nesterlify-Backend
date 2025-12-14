@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import User from "../models/user.model";
 import { CustomRequest } from "../middleware/verify";
 import { errorHandler } from "../middleware/errorHandler";
-import {sendMail} from "../utils/sendMail";
+import { sendMail } from "../utils/sendMail";
 import { PasswordReset } from "../models/temporaryData";
 
 // Get user details
@@ -171,31 +171,33 @@ export const emailNotification = async (
 
 // Change password request
 export const changePassword = async (
-  req: Request,
+  req: CustomRequest,
   res: Response,
   next: NextFunction
 ) => {
   const { oldPassword, newPassword } = req.body;
 
   try {
-    const ID = req.params.id;
-    const user = await User.findOne({ ID });
+    if (!req.user) return errorHandler(res, 401, "Unauthorized");
+    const user = await User.findById(req.user.id);
     if (!user) return errorHandler(res, 404, "User not found.");
     const email = user.email;
 
-    const validPassword = bcrypt.compareSync(oldPassword, user.password);
+    const validPassword = await bcrypt.compare(oldPassword, user.password);
     if (!validPassword)
       return errorHandler(res, 401, "Old password is incorrect");
 
     const otpCode = Math.floor(100000 + Math.random() * 900000);
     const expirationTime = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
     await PasswordReset.findOneAndUpdate(
       { email },
       {
         otpCode,
         expirationTime,
-        newHashedPassword: bcrypt.hashSync(newPassword, 10),
+        newHashedPassword: hashedNewPassword,
       },
       { upsert: true, new: true }
     );
