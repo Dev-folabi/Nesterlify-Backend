@@ -150,11 +150,11 @@ export const nowPaymentWebhook = async (
     // Extract signature from headers
     const nowPaymentsSig = req.headers["x-nowpayments-sig"] as string;
 
-    // if (!nowPaymentsSig) {
-    //   return res
-    //     .status(400)
-    //     .json({ success: false, message: "Missing signature" });
-    // }
+    if (!nowPaymentsSig) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing signature" });
+    }
 
     // Helper function to recursively sort JSON keys
     const sortObject = (obj: any): any => {
@@ -180,11 +180,11 @@ export const nowPaymentWebhook = async (
       .update(sortedParams)
       .digest("hex");
 
-    // if (generatedSignature !== nowPaymentsSig) {
-    //   return res
-    //     .status(403)
-    //     .json({ success: false, message: "Invalid signature" });
-    // }
+    if (generatedSignature !== nowPaymentsSig) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Invalid signature" });
+    }
 
     const { payment_id, payment_status, order_id } = req.body;
 
