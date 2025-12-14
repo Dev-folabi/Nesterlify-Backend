@@ -329,6 +329,7 @@ export const bookFlight = async (offerId: string) => {
     // Mark payment as completed
     booking.bookingStatus = "confirmed";
     booking.paymentDetails.paymentStatus = "completed";
+    booking.markModified("flights");
     await booking.save();
   } catch (error: any) {
     console.log("Booking Error:", error);
@@ -466,6 +467,25 @@ export const bookCarTransfer = async (orderId: string) => {
       throw new Error("Booking failed: " + response.result.errors[0].detail);
     }
 
+    const transferData = response.result.data.transfers[0];
+
+    // Update booking with confirmed details
+    booking.car[0].confirmNbr = transferData.confirmNbr;
+    booking.car[0].transferType = transferData.transferType;
+    booking.car[0].distance = transferData.distance;
+    booking.car[0].start = transferData.start;
+    booking.car[0].end = transferData.end;
+    booking.car[0].vehicle = transferData.vehicle;
+    booking.car[0].serviceProvider =
+      transferData.partnerInfo?.serviceProvider || transferData.serviceProvider;
+    booking.car[0].quotation = transferData.quotation;
+
+    booking.bookingStatus = "confirmed";
+    booking.paymentDetails.paymentStatus = "completed";
+
+    booking.markModified("car");
+    await booking.save();
+
     return {
       success: true,
       message: "Booking successful",
@@ -564,6 +584,7 @@ export const bookHotel = async (offerId: string) => {
     booking.hotel[0].booking_id = bookingData.id;
     booking.bookingStatus = bookingData.status;
 
+    booking.markModified("hotel");
     await booking.save();
 
     return {

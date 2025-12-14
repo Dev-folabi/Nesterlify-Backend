@@ -11,6 +11,7 @@ import User from "../models/user.model";
 import Notification from "../models/notification.model";
 import logger from "../utils/logger";
 import { processCommonBooking } from "../utils/bookingUtils";
+import { sendPaymentSuccessEmail } from "../utils/emailUtils";
 dotenv.config();
 
 // Environment Variables
@@ -255,26 +256,11 @@ export const binanceWebhook = async (
     if (bizStatus === "PAY_SUCCESS") {
       const user = await User.findById(booking.userId);
 
-      await Promise.all([
-        sendMail({
-          email: user?.email || "",
-          subject: "Payment Successful",
-          message: `Dear ${user?.firstName || "Customer"},
-          
-          Your payment for ${bookingType} booking with order ID ${orderId} has been successfully processed.
-
-          Thank you for choosing our service.
-
-          Best regards,
-          The Nesterlify Team`,
-        }),
-        Notification.create({
-          userId: booking.userId,
-          title: "Payment Successful",
-          message: `Your payment for ${bookingType} booking with order ID ${orderId} has been successfully processed.`,
-          category: `${bookingType}`,
-        }),
-      ]);
+      await sendPaymentSuccessEmail({
+        user,
+        booking,
+        orderId,
+      });
     }
 
     return res.status(200).json({ returnCode: "SUCCESS" });

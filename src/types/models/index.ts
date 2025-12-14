@@ -217,6 +217,50 @@ interface Car {
       localDateTime?: string;
     };
   };
+  confirmNbr?: string;
+  transferType?: string;
+  distance?: {
+    value: number;
+    unit: string;
+  };
+  start?: {
+    dateTime: string;
+    locationCode?: string;
+    address: {
+      countryCode: string;
+      line?: string;
+      zip?: string;
+      cityName?: string;
+    };
+  };
+  end?: {
+    dateTime: string;
+    address: {
+      line: string;
+      countryCode: string;
+      latitude?: number;
+      longitude?: number;
+      zip?: string;
+      cityName?: string;
+    };
+  };
+  vehicle?: {
+    code: string;
+    category: string;
+    description: string;
+    baggages: { count: number }[];
+    seats: { count: number }[];
+    imageURL: string;
+  };
+  serviceProvider?: {
+    code: string;
+    name: string;
+    logoUrl: string;
+  };
+  quotation?: {
+    monetaryAmount: string;
+    currencyCode: string;
+  };
 }
 
 interface Guest {

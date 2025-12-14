@@ -13,6 +13,7 @@ import User from "../models/user.model";
 import Notification from "../models/notification.model";
 import logger from "../utils/logger";
 import { processCommonBooking } from "../utils/bookingUtils";
+import { sendPaymentSuccessEmail } from "../utils/emailUtils";
 dotenv.config();
 
 // Environment Variables
@@ -232,28 +233,34 @@ export const gatePayWebhook = async (
     // Notify the User
     const user = await User.findById(booking.userId);
 
-    await Promise.all([
-      sendMail({
-        email: user?.email || "",
-        subject:
-          bizStatus === "PAY_SUCCESS" ? "Payment Successful" : "Payment Failed",
-        message: `Dear ${user?.firstName || "Customer"},
-    
-        Your payment for ${booking.bookingType} booking with order ID ${orderId} has been ${bizStatus === "PAY_SUCCESS" ? "successfully processed" : "failed"}.
+    if (bizStatus === "PAY_SUCCESS") {
+      await sendPaymentSuccessEmail({
+        user,
+        booking,
+        orderId,
+      });
+    } else {
+      await Promise.all([
+        sendMail({
+          email: user?.email || "",
+          subject: "Payment Failed",
+          message: `Dear ${user?.firstName || "Customer"},
+      
+          Your payment for ${booking.bookingType} booking with order ID ${orderId} has failed.
 
-        Thank you for choosing our service.
+          Please try again or contact support.
 
-        Best regards,
-        The Nesterlify Team`,
-      }),
-      Notification.create({
-        userId: booking.userId,
-        title:
-          bizStatus === "PAY_SUCCESS" ? "Payment Successful" : "Payment Failed",
-        message: `Your payment for ${booking.bookingType} booking with order ID ${orderId} has been ${bizStatus === "PAY_SUCCESS" ? "processed successfully" : "failed"}.`,
-        category: `${booking.bookingType}`,
-      }),
-    ]);
+          Best regards,
+          The Nesterlify Team`,
+        }),
+        Notification.create({
+          userId: booking.userId,
+          title: "Payment Failed",
+          message: `Your payment for ${booking.bookingType} booking with order ID ${orderId} has failed.`,
+          category: `${booking.bookingType}`,
+        }),
+      ]);
+    }
 
     return res.status(200).json({ returnCode: "SUCCESS" });
   } catch (error) {

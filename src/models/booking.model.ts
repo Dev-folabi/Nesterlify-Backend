@@ -209,6 +209,51 @@ const BookingSchema = new Schema<IBooking>(
             localDateTime: { type: String },
           },
         },
+        // New fields for confirmed booking details
+        confirmNbr: { type: String },
+        transferType: { type: String },
+        distance: {
+          value: { type: Number },
+          unit: { type: String },
+        },
+        start: {
+          dateTime: { type: String },
+          locationCode: { type: String },
+          address: {
+            countryCode: { type: String },
+            line: { type: String },
+            zip: { type: String },
+            cityName: { type: String },
+          },
+        },
+        end: {
+          dateTime: { type: String },
+          address: {
+            line: { type: String },
+            countryCode: { type: String },
+            latitude: { type: Number },
+            longitude: { type: Number },
+            zip: { type: String },
+            cityName: { type: String },
+          },
+        },
+        vehicle: {
+          code: { type: String },
+          category: { type: String },
+          description: { type: String },
+          baggages: [{ count: { type: Number } }],
+          seats: [{ count: { type: Number } }],
+          imageURL: { type: String },
+        },
+        serviceProvider: {
+          code: { type: String },
+          name: { type: String },
+          logoUrl: { type: String },
+        },
+        quotation: {
+          monetaryAmount: { type: String },
+          currencyCode: { type: String },
+        },
       },
     ],
     vacation: { type: Object, default: null },

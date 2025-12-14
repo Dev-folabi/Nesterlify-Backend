@@ -6,13 +6,10 @@ import Notification from "../models/notification.model";
 import { sendMail } from "../utils/sendMail";
 import logger from "../utils/logger";
 import { bookFlight, bookHotel, bookCarTransfer } from "../function/bookings";
+import { sendPaymentSuccessEmail } from "../utils/emailUtils";
 
 // Environment Variables
-const {
-  GATEPAY_API_KEY,
-  GATEPAY_BASE_URL,
-  GATEPAY_CLIENT_ID,
-} = process.env;
+const { GATEPAY_API_KEY, GATEPAY_BASE_URL, GATEPAY_CLIENT_ID } = process.env;
 
 // Generate Nonce (Random String)
 export const generateNonce = (length: number = 16): string => {
@@ -125,26 +122,11 @@ export const processSuccessfulPayment = async (
     await booking.save();
 
     const user = await User.findById(booking.userId);
-    await Promise.all([
-      sendMail({
-        email: user?.email || "",
-        subject: "Payment Successful",
-        message: `Dear ${user?.firstName || "Customer"},
-    
-        Your payment for ${booking.bookingType} booking with order ID ${orderId} has been successfully processed.
-
-        Thank you for choosing our service.
-
-        Best regards,
-        The Nesterlify Team`,
-      }),
-      Notification.create({
-        userId: booking.userId,
-        title: "Payment Successful",
-        message: `Your payment for ${booking.bookingType} booking with order ID ${orderId} has been processed successfully.`,
-        category: `${booking.bookingType}`,
-      }),
-    ]);
+    await sendPaymentSuccessEmail({
+      user,
+      booking,
+      orderId,
+    });
   } catch (error) {
     logger.error(
       `Error processing successful payment for order ${orderId}:`,
