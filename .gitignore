@@ -1,4 +1,5 @@
 /node_modules
+/logs
 # dotenv environment variable files
 .env
 .env.development.local

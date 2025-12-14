@@ -276,6 +276,13 @@ interface CheckInInformation {
 
 interface Hotel {
   quote_id: string;
+  name?: string;
+  address?: {
+    line_one?: string;
+    city_name?: string;
+    country_code?: string;
+    postal_code?: string;
+  };
   guests: Guest[];
   email: string;
   stay_special_requests?: string;

@@ -143,6 +143,13 @@ const BookingSchema = new Schema<IBooking>(
     hotel: [
       {
         quote_id: { type: String, required: true },
+        name: { type: String },
+        address: {
+          line_one: { type: String },
+          city_name: { type: String },
+          country_code: { type: String },
+          postal_code: { type: String },
+        },
         guests: [
           {
             given_name: { type: String, required: true },

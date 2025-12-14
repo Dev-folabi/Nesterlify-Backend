@@ -582,6 +582,14 @@ export const bookHotel = async (offerId: string) => {
         "",
     };
     booking.hotel[0].booking_id = bookingData.id;
+    booking.hotel[0].name = bookingData.accommodation.name;
+    const accommodation = bookingData.accommodation as any;
+    booking.hotel[0].address = {
+      line_one: accommodation.address?.line_one || "",
+      city_name: accommodation.address?.city_name || "",
+      country_code: accommodation.address?.country_code || "",
+      postal_code: accommodation.address?.postal_code || "",
+    };
     booking.bookingStatus = bookingData.status;
 
     booking.markModified("hotel");

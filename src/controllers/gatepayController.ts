@@ -234,11 +234,15 @@ export const gatePayWebhook = async (
     const user = await User.findById(booking.userId);
 
     if (bizStatus === "PAY_SUCCESS") {
-      await sendPaymentSuccessEmail({
-        user,
-        booking,
-        orderId,
-      });
+      // Refetch booking to get the updated details
+      const updatedBooking = await Booking.findById(booking._id);
+      if (updatedBooking) {
+        await sendPaymentSuccessEmail({
+          user,
+          booking: updatedBooking,
+          orderId,
+        });
+      }
     } else {
       await Promise.all([
         sendMail({

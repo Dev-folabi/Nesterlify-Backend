@@ -151,11 +151,11 @@ export const nowPaymentWebhook = async (
     // Extract signature from headers
     const nowPaymentsSig = req.headers["x-nowpayments-sig"] as string;
 
-    // if (!nowPaymentsSig) {
-    //   return res
-    //     .status(400)
-    //     .json({ success: false, message: "Missing signature" });
-    // }
+    if (!nowPaymentsSig) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing signature" });
+    }
 
     // Helper function to recursively sort JSON keys
     const sortObject = (obj: any): any => {
@@ -181,11 +181,11 @@ export const nowPaymentWebhook = async (
       .update(sortedParams)
       .digest("hex");
 
-    // if (generatedSignature !== nowPaymentsSig) {
-    //   return res
-    //     .status(403)
-    //     .json({ success: false, message: "Invalid signature" });
-    // }
+    if (generatedSignature !== nowPaymentsSig) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Invalid signature" });
+    }
 
     const { payment_id, payment_status, order_id } = req.body;
 
@@ -217,7 +217,7 @@ export const nowPaymentWebhook = async (
     }
 
     const bookingType = booking.bookingType;
-    let response;
+
     switch (payment_status) {
       case "waiting":
         booking.paymentDetails.paymentStatus = "pending";
@@ -241,7 +241,7 @@ export const nowPaymentWebhook = async (
               await bookHotel(order_id);
               break;
             case "car":
-            response =  await bookCarTransfer(order_id);
+              await bookCarTransfer(order_id);
               break;
             case "vacation":
               logger.info("Processing vacation booking...");
@@ -265,11 +265,15 @@ export const nowPaymentWebhook = async (
 
         // Send email and notification
         if (user) {
-          await sendPaymentSuccessEmail({
-            user,
-            booking,
-            orderId: order_id,
-          });
+          // Refetch booking to get the updated details (e.g. confirmed car/hotel info)
+          const updatedBooking = await Booking.findById(booking._id);
+          if (updatedBooking) {
+            await sendPaymentSuccessEmail({
+              user,
+              booking: updatedBooking,
+              orderId: order_id,
+            });
+          }
         }
         break;
 
@@ -285,7 +289,7 @@ export const nowPaymentWebhook = async (
           .json({ success: false, message: "Unknown payment status" });
     }
 
-    return res.status(200).json({ returnCode: "SUCCESS", response });
+    return res.status(200).json({ returnCode: "SUCCESS" });
   } catch (error) {
     logger.error("NOWPayments Webhook Error:", error);
     next(error);

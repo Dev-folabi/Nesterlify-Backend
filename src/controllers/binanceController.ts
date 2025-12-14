@@ -256,11 +256,15 @@ export const binanceWebhook = async (
     if (bizStatus === "PAY_SUCCESS") {
       const user = await User.findById(booking.userId);
 
-      await sendPaymentSuccessEmail({
-        user,
-        booking,
-        orderId,
-      });
+      // Refetch booking to get the updated details
+      const updatedBooking = await Booking.findById(booking._id);
+      if (updatedBooking) {
+        await sendPaymentSuccessEmail({
+          user,
+          booking: updatedBooking,
+          orderId,
+        });
+      }
     }
 
     return res.status(200).json({ returnCode: "SUCCESS" });
