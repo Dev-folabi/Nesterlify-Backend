@@ -93,4 +93,32 @@ export interface OrderRequest {
   phone_number?: string;
   stay_special_requests?: string;
   pay_currency?: string; // Required for now payment
+  startConnectedSegment?: {
+    transportationType: string;
+    transportationNumber: string;
+    departure: {
+      uicCode: string;
+      iataCode: string;
+      localDateTime: string;
+    };
+    arrival: {
+      uicCode: string;
+      iataCode: string;
+      localDateTime: string;
+    };
+  };
+  endConnectedSegment?: {
+    transportationType: string;
+    transportationNumber: string;
+    departure: {
+      uicCode: string;
+      iataCode: string;
+      localDateTime: string;
+    };
+    arrival: {
+      uicCode: string;
+      iataCode: string;
+      localDateTime: string;
+    };
+  };
 }

@@ -181,6 +181,34 @@ const BookingSchema = new Schema<IBooking>(
         ],
         carOfferID: { type: String, required: true },
         note: { type: String, default: "No special requests" },
+        startConnectedSegment: {
+          transportationType: { type: String },
+          transportationNumber: { type: String },
+          departure: {
+            uicCode: { type: String },
+            iataCode: { type: String },
+            localDateTime: { type: String },
+          },
+          arrival: {
+            uicCode: { type: String },
+            iataCode: { type: String },
+            localDateTime: { type: String },
+          },
+        },
+        endConnectedSegment: {
+          transportationType: { type: String },
+          transportationNumber: { type: String },
+          departure: {
+            uicCode: { type: String },
+            iataCode: { type: String },
+            localDateTime: { type: String },
+          },
+          arrival: {
+            uicCode: { type: String },
+            iataCode: { type: String },
+            localDateTime: { type: String },
+          },
+        },
       },
     ],
     vacation: { type: Object, default: null },

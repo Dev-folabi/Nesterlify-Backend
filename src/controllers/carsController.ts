@@ -166,7 +166,7 @@ export const findCars = async (
 
     return res.status(200).json({
       success: true,
-      message: "Car transfer search completed successfully with a 55% markup.",
+      message: "Car transfer search completed successfully",
       data: paginateResults(
         carsWithMarkup,
         parseInt(req.query?.page as string, 10),

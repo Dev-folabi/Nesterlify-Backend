@@ -3,22 +3,14 @@ import crypto from "crypto";
 import { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import { BinanceOrderPayload, PaymentStatusRequest } from "../types/binance";
-import { OrderRequest } from "../types/requests";
 import Booking from "../models/booking.model";
-import {
-  bookFlight,
-  processFlightBooking,
-  bookCarTransfer,
-  processingCarBooking,
-  bookHotel,
-  processingHotelBooking,
-} from "../function/bookings";
-import { generateOrderId } from "../function";
+import { bookCarTransfer, bookFlight, bookHotel } from "../function/bookings";
 import { customRequest } from "../types/requests";
 import { sendMail } from "../utils/sendMail";
 import User from "../models/user.model";
 import Notification from "../models/notification.model";
 import logger from "../utils/logger";
+import { processCommonBooking } from "../utils/bookingUtils";
 dotenv.config();
 
 // Environment Variables
@@ -60,117 +52,21 @@ export const createOrder = async (
   next: NextFunction
 ) => {
   try {
-    const {
-      amount,
-      currency,
-      bookingType,
-      flightOffers,
-      travelers,
-      carOfferID,
-      passengers,
-      note,
-      quote_id,
-      guests,
-      email,
-      phone_number,
-      stay_special_requests,
-    }: OrderRequest = req.body;
+    const bookingResult = await processCommonBooking(
+      req as customRequest,
+      res,
+      "Binance Pay"
+    );
 
-    if (!amount || !currency || !bookingType) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing required fields" });
-    }
-
-    // Validate flight booking fields
-    if (bookingType === "flight" && (!flightOffers || !travelers)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Flight missing required fields" });
-    }
-
-    // Validate hotel booking fields
-    if (
-      bookingType === "hotel" &&
-      (!quote_id || !guests || !email || !phone_number)
-    ) {
-      return res.status(400).json({
+    if (!bookingResult.success) {
+      return res.status(bookingResult.status!).json({
         success: false,
-        message: "Hotel booking missing required fields",
+        message: bookingResult.message,
       });
     }
 
-    // Validate car booking fields
-    if (
-      bookingType === "car" &&
-      (!carOfferID || !passengers || passengers.length === 0)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Car Transfer missing required fields",
-      });
-    }
-
-    // Validate Vacation booking fields
-    // Todo: implement Vacation checks
-
-    const userId = (req as customRequest).user?.id;
-    if (!userId)
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthorized, pls login" });
-    const paymentMethod = "Binance Pay";
-
-    const orderId = generateOrderId();
-    // const cryptId = orderId.replace("ORD-", "");
-
-    // Booking Logics
-    switch (bookingType) {
-      case "flight":
-        await processFlightBooking(
-          userId,
-          orderId,
-          flightOffers!,
-          travelers!,
-          amount,
-          currency,
-          paymentMethod
-        );
-        break;
-      case "hotel":
-        await processingHotelBooking(
-          userId,
-          orderId,
-          amount,
-          currency,
-          paymentMethod,
-          quote_id!,
-          guests!,
-          email!,
-          phone_number!,
-          stay_special_requests
-        );
-        break;
-      case "car":
-        await processingCarBooking(
-          userId,
-          orderId,
-          carOfferID!,
-          passengers!,
-          amount,
-          currency,
-          paymentMethod,
-          note
-        );
-        break;
-      case "vacation":
-        logger.info("Processing vacation booking...");
-        break;
-      default:
-        return res
-          .status(400)
-          .json({ success: false, message: "Invalid booking type" });
-    }
+    const { orderId, user, amount, currency, bookingType } =
+      bookingResult.data!;
 
     const payload: BinanceOrderPayload = {
       env: { terminalType: "WEB" },
@@ -208,7 +104,6 @@ export const createOrder = async (
       }
     );
 
-    const user = await User.findById(userId);
     await Promise.all([
       sendMail({
         email: user?.email || "",
@@ -226,7 +121,7 @@ export const createOrder = async (
     The Nesterlify Team`,
       }),
       Notification.create({
-        userId,
+        userId: user?._id,
         title:
           response.data.status === "SUCCESS"
             ? `${bookingType.toUpperCase()} - Booking Initiated`

@@ -3,6 +3,7 @@ import Booking from "../models/booking.model";
 import { amadeus } from "../utils/amadeus";
 import { Duffel } from "@duffel/api";
 import dotenv from "dotenv";
+import logger from "../utils/logger";
 
 dotenv.config();
 
@@ -345,7 +346,9 @@ export const processingCarBooking = async (
   amount: number,
   currency: string,
   paymentMethod: string,
-  note?: string
+  note?: string,
+  startConnectedSegment?: any,
+  endConnectedSegment?: any
 ) => {
   if (!Array.isArray(passengers) || passengers.length === 0) {
     throw new Error("Invalid passenger data");
@@ -384,6 +387,8 @@ export const processingCarBooking = async (
       carOfferID,
       passengers: carPassengers,
       note: note || "No special requests",
+      startConnectedSegment,
+      endConnectedSegment,
     },
     paymentDetails: {
       transactionId: orderId,
@@ -443,6 +448,7 @@ export const bookCarTransfer = async (orderId: string) => {
         //     itemId: "",
         //   },
         // ],
+        startConnectedSegment: booking.car[0].startConnectedSegment,
       },
     };
 
@@ -454,7 +460,7 @@ export const bookCarTransfer = async (orderId: string) => {
       carOfferID
     );
 
-    console.log(response.result);
+    logger.info(response.result);
 
     if (response.result.errors) {
       throw new Error("Booking failed: " + response.result.errors[0].detail);

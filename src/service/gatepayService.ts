@@ -8,7 +8,11 @@ import logger from "../utils/logger";
 import { bookFlight, bookHotel, bookCarTransfer } from "../function/bookings";
 
 // Environment Variables
-const { GATEPAY_API_KEY, GATEPAY_BASE_URL } = process.env;
+const {
+  GATEPAY_API_KEY,
+  GATEPAY_BASE_URL,
+  GATEPAY_CLIENT_ID,
+} = process.env;
 
 // Generate Nonce (Random String)
 export const generateNonce = (length: number = 16): string => {
@@ -22,7 +26,7 @@ export const generateSignature = (
   body: string
 ): string => {
   if (!GATEPAY_API_KEY) {
-    throw new Error("GATEPAY_SECRET_KEY is missing");
+    throw new Error("GATEPAY_API_KEY is missing");
   }
   const payload = `${timestamp}\n${nonce}\n${body}\n`;
   return crypto
@@ -47,6 +51,7 @@ export const queryGatePayOrder = async (orderId: string) => {
         headers: {
           "Content-Type": "application/json",
           "X-GatePay-API-Key": GATEPAY_API_KEY!,
+          "X-GatePay-Certificate-ClientId": GATEPAY_CLIENT_ID!,
           "X-GatePay-Timestamp": timestamp,
           "X-GatePay-Nonce": nonce,
           "X-GatePay-Signature": signature,

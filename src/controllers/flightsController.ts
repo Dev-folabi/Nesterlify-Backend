@@ -182,11 +182,12 @@ export const searchFlights = async (
     try {
       response = await amadeus.shopping.flightOffersSearch.get(params);
     } catch (err: any) {
-      logger.error("Amadeus flight search failed", {
+      logger.error("Amadeus error FULL", {
+        params,
+        status: err?.response?.status,
         message: err.message,
-        response: err?.response?.data,
+        data: err?.response?.data,
       });
-
       return errorHandler(res, 502, "Failed to fetch flights from provider.");
     }
 

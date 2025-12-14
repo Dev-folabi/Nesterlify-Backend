@@ -189,6 +189,34 @@ interface Car {
   ];
   carOfferID: string;
   note?: string;
+  startConnectedSegment?: {
+    transportationType?: string;
+    transportationNumber?: string;
+    departure?: {
+      uicCode?: string;
+      iataCode?: string;
+      localDateTime?: string;
+    };
+    arrival?: {
+      uicCode?: string;
+      iataCode?: string;
+      localDateTime?: string;
+    };
+  };
+  endConnectedSegment?: {
+    transportationType?: string;
+    transportationNumber?: string;
+    departure?: {
+      uicCode?: string;
+      iataCode?: string;
+      localDateTime?: string;
+    };
+    arrival?: {
+      uicCode?: string;
+      iataCode?: string;
+      localDateTime?: string;
+    };
+  };
 }
 
 interface Guest {
@@ -237,13 +265,7 @@ export interface INotification extends Document {
   title: string;
   message: string;
   read: boolean;
-  category:
-    | "hotel"
-    | "flight"
-    | "activity"
-    | "car"
-    | "transaction"
-    | "general";
+  category: "hotel" | "flight" | "activity" | "car" | "transaction" | "general";
   createdAt: Date;
   updatedAt: Date;
 }
