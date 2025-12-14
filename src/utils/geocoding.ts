@@ -1,8 +1,6 @@
 import axios from "axios";
 import logger from "./logger";
 
-const { NOMINATIM_BASE_URL } = process.env;
-
 /**
  * Interface for geocode result
  */
@@ -33,16 +31,19 @@ export interface GeocodeResultString {
  */
 export const getGeocode = async (location: string): Promise<GeocodeResult> => {
   try {
-    const response = await axios.get(`${NOMINATIM_BASE_URL}/search`, {
-      params: {
-        q: location,
-        format: "json",
-        addressdetails: 1,
-      },
-      headers: {
-        "User-Agent": "Nesterlify-Backend/1.0 (contact@nesterlify.com)",
-      },
-    });
+    const response = await axios.get(
+      `${process.env.NOMINATIM_BASE_URL}/search`,
+      {
+        params: {
+          q: location,
+          format: "json",
+          addressdetails: 1,
+        },
+        headers: {
+          "User-Agent": "Nesterlify-Backend/1.0 (contact@nesterlify.com)",
+        },
+      }
+    );
 
     if (!response.data || response.data.length === 0) {
       throw new Error(`Location not found: ${location}`);
@@ -76,7 +77,7 @@ export const getGeocodeString = async (
   location: string
 ): Promise<GeocodeResultString | null> => {
   try {
-    const url = `${NOMINATIM_BASE_URL}/search?q=${encodeURIComponent(location)}&format=json`;
+    const url = `${process.env.NOMINATIM_BASE_URL}/search?q=${encodeURIComponent(location)}&format=json`;
     const response = await axios.get(url, {
       headers: {
         "User-Agent": "Nesterlify-Backend/1.0 (contact@nesterlify.com)",
