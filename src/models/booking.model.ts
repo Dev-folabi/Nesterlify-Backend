@@ -17,7 +17,7 @@ const BookingSchema = new Schema<IBooking>(
         source: { type: String, required: true }, // e.g., "GDS"
         instantTicketingRequired: { type: Boolean, required: true },
         nonHomogeneous: { type: Boolean, required: true },
-        paymentCardRequired: { type: Boolean, required: true },
+        paymentCardRequired: { type: Boolean },
         lastTicketingDate: { type: String, required: true },
 
         itineraries: [
@@ -62,7 +62,7 @@ const BookingSchema = new Schema<IBooking>(
             },
           ],
           grandTotal: { type: String, required: true },
-          billingCurrency: { type: String, required: true },
+          billingCurrency: { type: String },
         },
 
         pricingOptions: {
@@ -87,7 +87,7 @@ const BookingSchema = new Schema<IBooking>(
                   code: { type: String, required: true },
                 },
               ],
-              refundableTaxes: { type: String, required: true },
+              refundableTaxes: { type: String },
             },
             fareDetailsBySegment: [
               {

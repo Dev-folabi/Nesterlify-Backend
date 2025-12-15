@@ -87,6 +87,7 @@ export const closeGatePayOrder = async (orderId: string) => {
         timeout: 10000,
       }
     );
+    logger.info(`Closing GatePay order ${orderId}:`, response.data);
     return response.data;
   } catch (error) {
     logger.error(`Error closing GatePay order ${orderId}:`, error);

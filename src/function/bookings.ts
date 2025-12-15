@@ -104,11 +104,12 @@ export const processFlightBooking = async (
           duration: segment.duration,
           segmentId: segment.id,
           numberOfStops: segment.numberOfStops,
-          co2Emissions: segment.co2Emissions.map((emission: any) => ({
-            weight: emission.weight,
-            weightUnit: emission.weightUnit,
-            cabin: emission.cabin,
-          })),
+          co2Emissions:
+            segment.co2Emissions?.map((emission: any) => ({
+              weight: emission.weight,
+              weightUnit: emission.weightUnit,
+              cabin: emission.cabin,
+            })) || [],
         })),
       })),
 
@@ -139,10 +140,11 @@ export const processFlightBooking = async (
           currency: traveler.price.currency,
           total: traveler.price.total,
           base: traveler.price.base,
-          taxes: traveler.price.taxes.map((tax: any) => ({
-            amount: tax.amount,
-            code: tax.code,
-          })),
+          taxes:
+            traveler.price.taxes?.map((tax: any) => ({
+              amount: tax.amount,
+              code: tax.code,
+            })) || [],
           refundableTaxes: traveler.price.refundableTaxes,
         },
         fareDetailsBySegment: traveler.fareDetailsBySegment.map(
@@ -193,7 +195,7 @@ export const bookFlight = async (offerId: string) => {
 
     // Map flight offers
     const flightOffers = booking.flights.map((flight, index) => ({
-      id: (`${index}` + 1).toString(),
+      id: (index + 1).toString(),
       type: "flight-offer",
       validatingAirlineCodes: flight.validatingAirlineCodes,
       source: flight.source,
@@ -217,11 +219,12 @@ export const bookFlight = async (offerId: string) => {
           duration: segment.duration,
           id: segment.segmentId,
           numberOfStops: segment.numberOfStops,
-          co2Emissions: segment.co2Emissions.map((emission: any) => ({
-            weight: emission.weight,
-            weightUnit: emission.weightUnit,
-            cabin: emission.cabin,
-          })),
+          co2Emissions:
+            segment.co2Emissions?.map((emission: any) => ({
+              weight: emission.weight,
+              weightUnit: emission.weightUnit,
+              cabin: emission.cabin,
+            })) || [],
         })),
       })),
       price: {
@@ -248,10 +251,11 @@ export const bookFlight = async (offerId: string) => {
           currency: traveler.price.currency,
           base: traveler.price.base,
           refundableTaxes: traveler.price.refundableTaxes,
-          taxes: traveler.price.taxes.map((tax: any) => ({
-            amount: tax.amount,
-            code: tax.code,
-          })),
+          taxes:
+            traveler.price.taxes?.map((tax: any) => ({
+              amount: tax.amount,
+              code: tax.code,
+            })) || [],
         },
         fareDetailsBySegment: traveler.fareDetailsBySegment.map(
           (segment: any) => ({
@@ -268,11 +272,11 @@ export const bookFlight = async (offerId: string) => {
     }));
 
     // Format travelers properly
-    const travelers = booking.flights.flatMap((flight) => flight.travelers);
+    const travelers = booking.flights[0].travelers;
 
     const formattedTravelers = travelers.map(
       (traveler: any, index: number) => ({
-        id: (`${index}` + 1).toString(),
+        id: traveler.id,
         dateOfBirth: traveler.dateOfBirth,
         name: {
           firstName: traveler.name.firstName.toUpperCase(),

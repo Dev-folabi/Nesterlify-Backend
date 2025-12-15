@@ -210,7 +210,7 @@ export const nowPaymentWebhook = async (
 
     // Prevent duplicate booking confirmation
     if (
-      booking.paymentDetails.nowPaymentId === payment_id &&
+      booking.paymentDetails.nowPaymentId === String(payment_id) &&
       booking.paymentDetails.paymentStatus === "completed"
     ) {
       return res.status(200).json({ returnCode: "SUCCESS" });
