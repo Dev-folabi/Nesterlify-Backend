@@ -147,13 +147,21 @@ export const createGatePayOrder = async (
 const verifyGatePaySignature = (req: Request) => {
   const gatePaySecret = process.env.GATEPAY_API_KEY!;
   const receivedSignature = req.headers["x-gatepay-signature"];
+  const timestamp = req.headers["x-gatepay-timestamp"];
+  const nonce = req.headers["x-gatepay-nonce"];
 
-  const computedSignature = crypto
-    .createHmac("sha256", gatePaySecret)
-    .update(JSON.stringify(req.body))
-    .digest("hex");
+  if (!receivedSignature || !timestamp || !nonce) {
+    return false;
+  }
 
-  return receivedSignature === computedSignature;
+  const bodyString = req.rawBody || JSON.stringify(req.body);
+  const signature = generateSignature(
+    timestamp as string,
+    nonce as string,
+    bodyString
+  );
+
+  return receivedSignature === signature;
 };
 
 // Payment Callback - Confirm Booking
@@ -172,8 +180,19 @@ export const gatePayWebhook = async (
         .json({ success: false, message: "Invalid signature" });
     }
 
-    const { bizStatus, data } = req.body;
+    let { bizStatus, data } = req.body;
     console.log("GatePay Webhook Notification:", req.body);
+
+    if (typeof data === "string") {
+      try {
+        data = JSON.parse(data);
+      } catch (error) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid data JSON" });
+      }
+    }
+
     // Ensure `data` Exists
     if (!data || !data.merchantTradeNo) {
       return res
@@ -200,7 +219,10 @@ export const gatePayWebhook = async (
     }
 
     // Process Payment Status
-    if (bizStatus === "PAY_SUCCESS") {
+    if (
+      bizStatus === "PAY_SUCCESS" ||
+      bizStatus === "TRANSFERRED_ADDRESS_IN_TERM"
+    ) {
       switch (booking.bookingType) {
         case "flight":
           await bookFlight(orderId);

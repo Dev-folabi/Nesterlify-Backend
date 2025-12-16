@@ -80,6 +80,7 @@ export const closeGatePayOrder = async (orderId: string) => {
         headers: {
           "Content-Type": "application/json",
           "X-GatePay-API-Key": GATEPAY_API_KEY!,
+          "X-GatePay-Certificate-ClientId": GATEPAY_CLIENT_ID!,
           "X-GatePay-Timestamp": timestamp,
           "X-GatePay-Nonce": nonce,
           "X-GatePay-Signature": signature,

@@ -46,7 +46,13 @@ app.set("trust proxy", 1);
 // Rate limiter middleware
 app.use(rateLimiter);
 
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req: Request, res: Response, buf: Buffer) => {
+      req.rawBody = buf.toString();
+    },
+  })
+);
 app.use(morgan("combined"));
 app.use(requestLogger);
 
@@ -74,7 +80,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 // Database Connection
 connectDB()
   .then(() => {
-    startCronJobs();
+    // startCronJobs();
     app.listen(port, () => {
       console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
     });
