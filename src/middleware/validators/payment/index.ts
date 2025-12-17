@@ -89,57 +89,5 @@ export const validateCreateOrder = [
     .isEmail()
     .withMessage("Passenger email is required"),
 
-  body("startConnectedSegment")
-    .if(body("bookingType").equals("car"))
-    .notEmpty()
-    .isObject()
-    .withMessage("startConnectedSegment must be an object"),
-
-  body("startConnectedSegment.transportationType")
-    .if(body("startConnectedSegment").exists())
-    .isString()
-    .withMessage("startConnectedSegment.transportationType must be a string"),
-
-  body("startConnectedSegment.transportationNumber")
-    .if(body("startConnectedSegment").exists())
-    .isString()
-    .withMessage("startConnectedSegment.transportationNumber must be a string"),
-
-  body("startConnectedSegment.departure")
-    .if(body("startConnectedSegment").exists())
-    .isObject()
-    .withMessage("startConnectedSegment.departure must be an object"),
-
-  body("startConnectedSegment.arrival")
-    .if(body("startConnectedSegment").exists())
-    .isObject()
-    .withMessage("startConnectedSegment.arrival must be an object"),
-
-  body("endConnectedSegment")
-    .if(body("bookingType").equals("car"))
-    .optional()
-    .isObject()
-    .withMessage("endConnectedSegment must be an object"),
-
-  body("endConnectedSegment.transportationType")
-    .if(body("endConnectedSegment").exists())
-    .isString()
-    .withMessage("endConnectedSegment.transportationType must be a string"),
-
-  body("endConnectedSegment.transportationNumber")
-    .if(body("endConnectedSegment").exists())
-    .isString()
-    .withMessage("endConnectedSegment.transportationNumber must be a string"),
-
-  body("endConnectedSegment.departure")
-    .if(body("endConnectedSegment").exists())
-    .isObject()
-    .withMessage("endConnectedSegment.departure must be an object"),
-
-  body("endConnectedSegment.arrival")
-    .if(body("endConnectedSegment").exists())
-    .isObject()
-    .withMessage("endConnectedSegment.arrival must be an object"),
-
   handleValidationErrors,
 ];

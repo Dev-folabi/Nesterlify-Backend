@@ -68,33 +68,29 @@ export const findCars = async (
     const { minPrice, maxPrice, sortBy, carType, cancellationPolicy } =
       req.query;
     const {
-      startLocationCode,
+      startAddressLine,
+      startCityName,
+      startCountryCode,
+      startGeoCode,
       endAddressLine,
+      endCityName,
       endCountryCode,
       endGeoCode,
       startDateTime,
+      passengers,
     } = req.body;
 
-    if (
-      !startLocationCode ||
-      !endAddressLine ||
-      !endCountryCode ||
-      !endGeoCode ||
-      !startDateTime
-    ) {
-      return res.status(400).json({
-        success: false,
-        error:
-          "Missing required parameters: startLocationCode, endAddressLine, endCountryCode, endGeoCode, startDateTime",
-      });
-    }
-
     const params: any = {
-      startLocationCode,
+      startAddressLine,
+      startCityName,
+      startCountryCode,
+      startGeoCode,
       endAddressLine,
+      endCityName,
       endCountryCode,
       endGeoCode,
       startDateTime,
+      passengers,
     };
 
     const response = await amadeus.shopping.transferOffers.post(params);

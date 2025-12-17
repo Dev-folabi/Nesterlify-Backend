@@ -447,13 +447,6 @@ export const bookCarTransfer = async (orderId: string) => {
             cvv: PAYMENT_CREDIT_CARD_CVV,
           },
         },
-        // extraServices: [
-        //   {
-        //     code: "",
-        //     itemId: "",
-        //   },
-        // ],
-        startConnectedSegment: booking.car[0].startConnectedSegment,
       },
     };
 
