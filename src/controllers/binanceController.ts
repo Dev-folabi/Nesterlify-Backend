@@ -82,13 +82,15 @@ export const createOrder = async (
         goodsDetail: `Payment for ${bookingType} booking`,
       },
       tradeType: "WEB",
-      timeout: 1800,
+      timeout: 20000,
       returnUrl: BINANCE_RETURN_URL || "",
       cancelUrl: BINANCE_CANCEL_URL || "",
       webhookUrl: BINANCE_WEBHOOK_URL || "",
     };
 
     const { signature, timestamp, nonce } = generateSignature(payload);
+
+    logger.info("Binance Order Payload:", JSON.stringify(payload));
 
     const response = await axios.post(
       `${BINANCE_BASE_URL}/binancepay/openapi/v2/order`,
@@ -101,10 +103,10 @@ export const createOrder = async (
           "BinancePay-Certificate-SN": BINANCE_API_KEY,
           "BinancePay-Signature": signature,
         },
-        timeout: 20000,
+        timeout: 60000,
       }
     );
-
+    logger.info("Binance API Response:", JSON.stringify(response.data));
     await Promise.all([
       sendMail({
         email: user?.email || "",
@@ -143,18 +145,13 @@ export const createOrder = async (
   } catch (error: any) {
     if (error.response) {
       logger.error(
-        "Binance API Error Response:",
-        JSON.stringify(
-          {
-            status: error.response.status,
-            data: error.response.data,
-          },
-          null,
-          2
-        )
+        `Binance API Error Response: ${JSON.stringify({
+          status: error.response.status,
+          data: error.response.data,
+        })}`
       );
     } else {
-      logger.error("Binance API Error:", error.message);
+      logger.error(`Binance API Error: ${error.message || error}`);
     }
     next(error);
   }
