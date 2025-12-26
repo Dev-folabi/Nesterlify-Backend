@@ -19,7 +19,6 @@ dotenv.config();
 // Environment Variables
 const {
   GATEPAY_CLIENT_ID,
-  GATEPAY_SECRET_KEY,
   GATEPAY_API_KEY,
   GATEPAY_MERCHANT_USERID,
   GATEPAY_CHAIN,
@@ -29,12 +28,7 @@ const {
   GATEPAY_CANCEL_URL,
 } = process.env;
 
-if (
-  !GATEPAY_CLIENT_ID ||
-  !GATEPAY_SECRET_KEY ||
-  !GATEPAY_BASE_URL ||
-  !GATEPAY_API_KEY
-) {
+if (!GATEPAY_CLIENT_ID || !GATEPAY_BASE_URL || !GATEPAY_API_KEY) {
   throw new Error("Missing required GatePay API environment variables");
 }
 
@@ -242,8 +236,7 @@ export const gatePayWebhook = async (
             .json({ success: false, message: "Invalid booking type" });
       }
 
-      // Update Booking Status
-      booking.bookingStatus = "confirmed";
+      // Update Payment Status
       booking.paymentDetails.paymentStatus = "completed";
     } else {
       booking.bookingStatus = "failed";

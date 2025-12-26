@@ -1,5 +1,4 @@
 import { Duffel } from "@duffel/api";
-import axios from "axios";
 import { NextFunction, Request, Response } from "express";
 import { errorHandler } from "../middleware/errorHandler";
 import { paginateResults } from "../function";
@@ -12,6 +11,7 @@ const { DUFFEL_TOKEN } = process.env;
 // Initialize Duffel API
 const duffel = new Duffel({
   token: DUFFEL_TOKEN!,
+  apiVersion: "v2",
 });
 // Type for search request body
 interface SearchRequestBody {

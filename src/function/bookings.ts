@@ -24,6 +24,7 @@ const {
 // Initialize Duffel API
 const duffel = new Duffel({
   token: DUFFEL_TOKEN!,
+  apiVersion: "v2",
 });
 
 // Create Flight Function
@@ -306,13 +307,25 @@ export const bookFlight = async (offerId: string) => {
     );
 
     // Make booking request to Amadeus API
-    const response = await amadeus.booking.flightOrders.post({
-      data: {
-        type: "flight-order",
-        flightOffers,
-        travelers: formattedTravelers,
-      },
-    });
+    let response;
+
+    try {
+      response = await amadeus.booking.flightOrders.post({
+        data: {
+          type: "flight-order",
+          flightOffers,
+          travelers: formattedTravelers,
+          ticketingAgreement: {
+            option: "CONFIRM",
+          },
+        },
+      });
+    } catch (error) {
+      booking.bookingStatus = "failed";
+      await booking.save();
+      logger.error("Flight Booking Error:", error);
+      throw new Error("Flight booking failed. Please try again.");
+    }
 
     const flightOrderResponse = response.data;
 
@@ -325,19 +338,17 @@ export const bookFlight = async (offerId: string) => {
       }
     } else {
       booking.bookingStatus = "failed";
-      booking.paymentDetails.paymentStatus = "failed";
       await booking.save();
       throw new Error("Flight booking failed");
     }
 
     // Mark payment as completed
     booking.bookingStatus = "confirmed";
-    booking.paymentDetails.paymentStatus = "completed";
     booking.markModified("flights");
     await booking.save();
   } catch (error: any) {
-    console.log("Booking Error:", error);
-    console.error("Booking Error:", error.response?.data || error.message);
+    logger.error("Booking Error:", error);
+    logger.error("Booking Error:", error.response?.data || error.message);
     throw new Error("Flight booking failed. Please try again.");
   }
 };
@@ -452,13 +463,22 @@ export const bookCarTransfer = async (orderId: string) => {
 
     const carOfferID = booking.car[0].carOfferID;
 
-    // Call Amadeus Transfer Booking API
-    const response = await amadeus.ordering.transferOrders.post(
-      JSON.stringify(bookingData),
-      carOfferID
-    );
+    let response;
 
-    logger.info(response.result);
+    try {
+      // Call Amadeus Transfer Booking API
+      response = await amadeus.ordering.transferOrders.post(
+        JSON.stringify(bookingData),
+        carOfferID
+      );
+
+      logger.info(response.result);
+    } catch (error) {
+      booking.bookingStatus = "failed";
+      await booking.save();
+      logger.error("Car Booking Error:", error);
+      throw new Error("Car booking failed. Please try again.");
+    }
 
     if (response.result.errors) {
       throw new Error("Booking failed: " + response.result.errors[0].detail);
@@ -478,7 +498,6 @@ export const bookCarTransfer = async (orderId: string) => {
     booking.car[0].quotation = transferData.quotation;
 
     booking.bookingStatus = "confirmed";
-    booking.paymentDetails.paymentStatus = "completed";
 
     booking.markModified("car");
     await booking.save();
@@ -554,13 +573,22 @@ export const bookHotel = async (offerId: string) => {
       throw new Error("Booking not found");
     }
 
-    const bookingResponse = await duffel.stays.bookings.create({
-      quote_id: booking.hotel[0].quote_id,
-      phone_number: booking.hotel[0].phone_number,
-      guests: booking.hotel[0].guests,
-      email: booking.hotel[0].email,
-      accommodation_special_requests: booking.hotel[0].stay_special_requests,
-    });
+    let bookingResponse;
+
+    try {
+      bookingResponse = await duffel.stays.bookings.create({
+        quote_id: booking.hotel[0].quote_id,
+        phone_number: booking.hotel[0].phone_number,
+        guests: booking.hotel[0].guests,
+        email: booking.hotel[0].email,
+        accommodation_special_requests: booking.hotel[0].stay_special_requests,
+      });
+    } catch (error) {
+      booking.bookingStatus = "failed";
+      await booking.save();
+      logger.error("Hotel Booking Error:", error);
+      throw new Error("Hotel booking failed. Please try again.");
+    }
 
     const bookingData = bookingResponse.data;
 

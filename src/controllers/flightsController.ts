@@ -74,6 +74,12 @@ export const searchLocation = async (
       ),
     });
   } catch (error: any) {
+    logger.error("Amadeus error", {
+      error,
+      status: error?.response?.status,
+      message: error.message,
+      data: error?.response?.data,
+    });
     next(error);
   }
 };
@@ -182,8 +188,9 @@ export const searchFlights = async (
     try {
       response = await amadeus.shopping.flightOffersSearch.get(params);
     } catch (err: any) {
-      logger.error("Amadeus error FULL", {
+      logger.error("Amadeus error", {
         params,
+        err,
         status: err?.response?.status,
         message: err.message,
         data: err?.response?.data,
@@ -346,10 +353,16 @@ export const searchMultiCityFlights = async (
           if (stops === "direct") params.nonStop = true;
           if (airlines) params.includedAirlineCodes = airlines;
 
-          const response =
-            await amadeus.shopping.flightOffersSearch.get(params);
+          let response;
 
-          if (!Array.isArray(response?.data)) {
+          try {
+            response = await amadeus.shopping.flightOffersSearch.get(params);
+          } catch (error: any) {
+            logger.error("Multi-city flight search fatal error", {
+              error,
+              message: error.message,
+              stack: error.stack,
+            });
             return {
               ...trip,
               flights: [],
@@ -435,6 +448,7 @@ export const searchMultiCityFlights = async (
     });
   } catch (error: any) {
     logger.error("Multi-city flight search fatal error", {
+      error,
       message: error.message,
       stack: error.stack,
     });

@@ -260,7 +260,6 @@ export const nowPaymentWebhook = async (
 
         booking.paymentDetails.nowPaymentId = payment_id;
         booking.paymentDetails.paymentStatus = "completed";
-        booking.bookingStatus = "confirmed";
         await booking.save();
 
         // Send email and notification

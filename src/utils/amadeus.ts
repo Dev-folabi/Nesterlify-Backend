@@ -7,6 +7,7 @@ dotenv.config();
 export const amadeus = new Amadeus({
   clientId: process.env.AMADEUS_CLIENT_ID || "",
   clientSecret: process.env.AMADEUS_CLIENT_SECRET || "",
+  hostname: process.env.NODE_ENV === "production" ? "production" : "test",
 });
 
 // async function checkAuth() {
